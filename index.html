@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pago con Tarjeta</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0f;
+      --card: #13131a;
+      --border: #2a2a3a;
+      --accent: #00e5ff;
+      --accent2: #7b2fff;
+      --text: #e8e8f0;
+      --muted: #6b6b80;
+      --success: #00e676;
+      --error: #ff1744;
+    }
+
+    body {
+      min-height: 100vh;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Syne', sans-serif;
+      color: var(--text);
+      padding: 2rem;
+      background-image:
+        radial-gradient(ellipse 80% 50% at 20% 20%, rgba(123,47,255,0.15) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 80%, rgba(0,229,255,0.1) 0%, transparent 60%);
+    }
+
+    .container {
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .header {
+      margin-bottom: 2.5rem;
+      animation: fadeUp 0.6s ease both;
+    }
+
+    .header h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+    }
+
+    .header h1 span {
+      color: var(--accent);
+    }
+
+    .header p {
+      margin-top: 0.5rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-family: 'Space Mono', monospace;
+    }
+
+    /* Tarjeta visual */
+    .card-preview {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 1.8rem;
+      margin-bottom: 2rem;
+      position: relative;
+      overflow: hidden;
+      animation: fadeUp 0.6s 0.1s ease both;
+    }
+
+    .card-preview::before {
+      content: '';
+      position: absolute;
+      top: -40px; right: -40px;
+      width: 150px; height: 150px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,229,255,0.15), transparent 70%);
+    }
+
+    .card-chip {
+      width: 40px; height: 30px;
+      background: linear-gradient(135deg, #d4a843, #f0c86a);
+      border-radius: 6px;
+      margin-bottom: 1.5rem;
+    }
+
+    .card-number-display {
+      font-family: 'Space Mono', monospace;
+      font-size: 1.2rem;
+      letter-spacing: 0.15em;
+      color: var(--text);
+      margin-bottom: 1.5rem;
+      id: cardDisplay;
+    }
+
+    .card-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+
+    .card-label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.2rem; }
+    .card-value { font-family: 'Space Mono', monospace; font-size: 0.9rem; }
+
+    /* Formulario */
+    .form {
+      animation: fadeUp 0.6s 0.2s ease both;
+    }
+
+    .field {
+      margin-bottom: 1.2rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    input {
+      width: 100%;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0.9rem 1rem;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.95rem;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0,229,255,0.1);
+    }
+
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+    .btn {
+      width: 100%;
+      padding: 1rem;
+      margin-top: 0.5rem;
+      background: linear-gradient(135deg, var(--accent2), var(--accent));
+      border: none;
+      border-radius: 12px;
+      font-family: 'Syne', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+      transition: opacity 0.2s, transform 0.1s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn:hover { opacity: 0.9; }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn .spinner {
+      display: none;
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 0 auto;
+    }
+
+    .btn.loading .btn-text { display: none; }
+    .btn.loading .spinner { display: block; }
+
+    /* Resultado */
+    .result {
+      margin-top: 1.5rem;
+      padding: 1rem 1.2rem;
+      border-radius: 12px;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.85rem;
+      display: none;
+      animation: fadeUp 0.3s ease both;
+    }
+
+    .result.success {
+      background: rgba(0,230,118,0.1);
+      border: 1px solid rgba(0,230,118,0.3);
+      color: var(--success);
+      display: block;
+    }
+
+    .result.error {
+      background: rgba(255,23,68,0.1);
+      border: 1px solid rgba(255,23,68,0.3);
+      color: var(--error);
+      display: block;
+    }
+
+    .result-icon { font-size: 1.5rem; margin-bottom: 0.5rem; }
+    .result-title { font-weight: 700; margin-bottom: 0.3rem; }
+    .result-detail { opacity: 0.8; font-size: 0.75rem; line-height: 1.5; }
+
+    /* API URL config */
+    .api-config {
+      background: rgba(255,255,255,0.03);
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+      padding: 0.8rem 1rem;
+      margin-bottom: 1.5rem;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--muted);
+      animation: fadeUp 0.6s 0.15s ease both;
+    }
+
+    .api-config span { color: var(--accent); }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <h1>Pago con<br/><span>Tarjeta</span></h1>
+    <p>// ProyectoFacturacion · payment-service</p>
+  </div>
+
+  <!-- Tarjeta visual -->
+  <div class="card-preview">
+    <div class="card-chip"></div>
+    <div class="card-number-display" id="cardDisplay">•••• •••• •••• ••••</div>
+    <div class="card-bottom">
+      <div>
+        <div class="card-label">Titular</div>
+        <div class="card-value" id="cardName">NOMBRE APELLIDO</div>
+      </div>
+      <div>
+        <div class="card-label">Vence</div>
+        <div class="card-value" id="cardExpiry">MM/AA</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- URL del API -->
+  <div class="api-config">
+    🔗 API: <span id="apiUrlDisplay">http://localhost:8080/payment/card</span>
+  </div>
+
+  <div class="form">
+    <div class="field">
+      <label>Número de tarjeta</label>
+      <input type="text" id="cardNumber" maxlength="19" placeholder="1234 5678 9012 3456" autocomplete="off"/>
+    </div>
+
+    <div class="field">
+      <label>Nombre del titular</label>
+      <input type="text" id="cardHolder" placeholder="Juan Pérez" autocomplete="off"/>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>Vencimiento</label>
+        <input type="text" id="expiry" maxlength="5" placeholder="MM/AA"/>
+      </div>
+      <div class="field">
+        <label>CVV</label>
+        <input type="text" id="cvv" maxlength="3" placeholder="123"/>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Monto (USD)</label>
+      <input type="number" id="amount" placeholder="0.00" min="0" step="0.01"/>
+    </div>
+
+    <button class="btn" id="payBtn" onclick="processPayment()">
+      <span class="btn-text">💳 Pagar ahora</span>
+      <div class="spinner"></div>
+    </button>
+
+    <div class="result" id="result"></div>
+  </div>
+</div>
+
+<script>
+  // ── Formatea número de tarjeta con espacios cada 4 dígitos ──
+  document.getElementById('cardNumber').addEventListener('input', function(e) {
+    let v = e.target.value.replace(/\D/g, '').substring(0, 16);
+    e.target.value = v.replace(/(.{4})/g, '$1 ').trim();
+    const display = v.padEnd(16, '•').replace(/(.{4})/g, '$1 ').trim();
+    document.getElementById('cardDisplay').textContent = display;
+  });
+
+  document.getElementById('cardHolder').addEventListener('input', function(e) {
+    document.getElementById('cardName').textContent = e.target.value.toUpperCase() || 'NOMBRE APELLIDO';
+  });
+
+  document.getElementById('expiry').addEventListener('input', function(e) {
+    let v = e.target.value.replace(/\D/g, '').substring(0, 4);
+    if (v.length >= 2) v = v.slice(0,2) + '/' + v.slice(2);
+    e.target.value = v;
+    document.getElementById('cardExpiry').textContent = v || 'MM/AA';
+  });
+
+  // ── Llama al microservicio ──
+  async function processPayment() {
+    const btn    = document.getElementById('payBtn');
+    const result = document.getElementById('result');
+
+    const card   = document.getElementById('cardNumber').value.replace(/\s/g, '');
+    const name   = document.getElementById('cardHolder').value;
+    const expiry = document.getElementById('expiry').value;
+    const cvv    = document.getElementById('cvv').value;
+    const amount = document.getElementById('amount').value;
+
+    if (!card || !name || !expiry || !cvv || !amount) {
+      showResult('error', '⚠️ Campos incompletos', 'Por favor completa todos los campos.');
+      return;
+    }
+
+    // URL de tu microservicio (cámbiala cuando estés en AKS)
+    const API_URL = 'http://localhost:8080/payment/card';
+
+    btn.classList.add('loading');
+    btn.disabled = true;
+    result.className = 'result';
+
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ card, name, expiry, cvv, amount: parseFloat(amount) })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        showResult('success', '✅ Pago aprobado', `Status: ${data.status}\n${data.message}`);
+      } else {
+        showResult('error', '❌ Pago rechazado', JSON.stringify(data, null, 2));
+      }
+    } catch (err) {
+      showResult('error', '🔌 Sin conexión al servidor',
+        'Asegúrate que payment-service esté corriendo en localhost:8080\n' + err.message);
+    } finally {
+      btn.classList.remove('loading');
+      btn.disabled = false;
+    }
+  }
+
+  function showResult(type, title, detail) {
+    const result = document.getElementById('result');
+    result.className = 'result ' + type;
+    result.innerHTML = `<div class="result-title">${title}</div><div class="result-detail">${detail}</div>`;
+  }
+</script>
+</body>
+</html>
