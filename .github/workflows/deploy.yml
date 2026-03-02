@@ -1,0 +1,32 @@
+name: CI - Build Microservices
+
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Make mvnw executable
+        run: |
+          chmod +x facturacion/mvnw
+          chmod +x tax-service/mvnw
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Build facturacion
+        working-directory: facturacion
+        run: ./mvnw -DskipTests package
+
+      - name: Build tax-service
+        working-directory: tax-service
+        run: ./mvnw -DskipTests package

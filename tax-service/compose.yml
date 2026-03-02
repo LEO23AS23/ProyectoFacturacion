@@ -1,0 +1,15 @@
+version: '3.8'
+services:
+  tax-service:
+    build: .
+    container_name: tax-contenedor 
+    environment:
+      - SERVER_PORT=8081
+    ports:
+      - "8081:8081"
+    networks:
+      - red-compartida-tienda
+
+networks:
+  red-compartida-tienda:
+    external: true 

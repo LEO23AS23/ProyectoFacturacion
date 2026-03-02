@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  db-tienda:
+    image: postgres:15-alpine
+    container_name: postgres_contenedor
+    restart: always
+    environment:
+      POSTGRES_DB: facturacion_db
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: 123
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - red-compartida-tienda 
+
+  app-facturacion:
+    build: .
+    container_name: spring_contenedor
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db-tienda
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db-tienda:5432/facturacion_db
+      SPRING_DATASOURCE_USERNAME: admin
+      SPRING_DATASOURCE_PASSWORD: 123
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    networks:
+      - red-compartida-tienda 
+
+volumes:
+  pgdata:
+
+networks:
+  red-compartida-tienda:
+    external: true
