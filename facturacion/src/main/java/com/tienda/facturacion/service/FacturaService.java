@@ -48,7 +48,8 @@ public class FacturaService {
             subtotalGlobal += detalle.getSubtotal();
         }
 
-        String url = "http://tax-contenedor:8081/api/tax/calcular?subtotal=" + subtotalGlobal;
+        String url = "http://tax-service:8081/api/tax/calcular?subtotal=" + subtotalGlobal;
+      
         
         try {
             System.out.println("Solicitando cálculo de IVA para subtotal: " + subtotalGlobal);
@@ -74,7 +75,8 @@ public class FacturaService {
     }
 
     public TaxResponse simularImpuesto(Double subtotal) {
-        String url = "http://tax-contenedor:8081/api/tax/calcular?subtotal=" + subtotal;
+        String url = "http://tax-service:8081/api/tax/calcular?subtotal=" + subtotal;
+
         try {
             return restTemplate.getForObject(url, TaxResponse.class);
         } catch (Exception e) {
