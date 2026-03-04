@@ -3,123 +3,327 @@
 <head>
     <meta charset="UTF-8">
     <title>POS System - Integración Microservicios</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
-        .sticky-top { top: 20px; }
-        .card-scroll { max-height: 300px; overflow-y: auto; }
-        .table-sm { font-size: 0.85rem; }
+        :root {
+            --bg: #f0f2f5;
+            --surface: #ffffff;
+            --border: #e2e6ea;
+            --primary: #1a56db;
+            --primary-dark: #1341b0;
+            --success: #057a55;
+            --text: #111827;
+            --muted: #6b7280;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--bg); font-family: 'DM Sans', sans-serif; color: var(--text); min-height: 100vh; }
+
+        .navbar {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 0.75rem 1.5rem;
+            display: flex; align-items: center; justify-content: space-between;
+            position: sticky; top: 0; z-index: 100;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .navbar-brand { font-size: 1rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; }
+        .navbar-brand .dot { width: 8px; height: 8px; background: var(--primary); border-radius: 50%; }
+        .status-pills { display: flex; gap: 0.5rem; }
+        .pill { font-family: 'DM Mono', monospace; font-size: 0.7rem; padding: 0.25rem 0.6rem; border-radius: 100px; display: flex; align-items: center; gap: 0.3rem; }
+        .pill-green { background: #d1fae5; color: #065f46; }
+        .pill-blue  { background: #dbeafe; color: #1e40af; }
+        .pill-dot   { width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+        .main { padding: 1.5rem; display: grid; grid-template-columns: 320px 1fr 280px; gap: 1.25rem; max-width: 1400px; margin: 0 auto; }
+
+        .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+        .panel-header { padding: 0.75rem 1rem; background: var(--text); color: #fff; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; justify-content: space-between; }
+        .panel-header.blue { background: var(--primary); }
+        .scroll-area { max-height: 260px; overflow-y: auto; }
+
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th { padding: 0.5rem 0.75rem; background: #f8fafc; font-size: 0.75rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border); }
+        td { padding: 0.6rem 0.75rem; border-bottom: 1px solid #f1f5f9; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #f8fafc; }
+
+        .btn-icon { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 0.2rem 0.4rem; cursor: pointer; color: var(--muted); font-size: 0.8rem; transition: all 0.15s; }
+        .btn-icon:hover { background: #fee2e2; border-color: #fca5a5; color: #c81e1e; }
+        .btn-sm-add { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: #fff; border-radius: 6px; padding: 0.2rem 0.5rem; font-size: 0.75rem; cursor: pointer; }
+
+        .carrito-body { padding: 1rem; }
+        .form-label-sm { font-size: 0.75rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.3rem; display: block; }
+        select.form-ctrl { width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem 0.75rem; font-size: 0.875rem; font-family: 'DM Sans', sans-serif; background: white; color: var(--text); outline: none; transition: border-color 0.15s; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.75rem center; }
+        select.form-ctrl:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(26,86,219,0.1); }
+
+        .resumen-body { padding: 1.25rem; }
+        .resumen-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; padding: 0.4rem 0; }
+        .resumen-total { display: flex; justify-content: space-between; align-items: center; font-size: 1.3rem; font-weight: 700; padding: 0.75rem 0; border-top: 2px solid var(--text); margin-top: 0.5rem; }
+        .resumen-total .amount { color: var(--success); }
+
+        .metodo-pago { padding: 1rem 1.25rem; border-top: 1px solid var(--border); }
+        .metodo-label { font-size: 0.75rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.6rem; }
+        .metodo-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+        .metodo-btn { border: 2px solid var(--border); border-radius: 8px; padding: 0.6rem; text-align: center; cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: all 0.15s; background: white; color: var(--muted); }
+        .metodo-btn:hover { border-color: var(--primary); color: var(--primary); }
+        .metodo-btn.active { border-color: var(--primary); background: #eff6ff; color: var(--primary); }
+
+        .btn-generar { width: 100%; padding: 0.85rem; background: var(--success); color: white; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 700; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: background 0.15s; margin-top: 1rem; }
+        .btn-generar:hover { background: #046c4e; }
+        .btn-generar:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .btn-tarjeta { width: 100%; padding: 0.85rem; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 700; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: background 0.15s; margin-top: 0.5rem; display: none; }
+        .btn-tarjeta:hover { background: var(--primary-dark); }
+        .btn-tarjeta:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .empty-cart { text-align: center; padding: 2rem; color: var(--muted); font-size: 0.85rem; }
+
+        /* MODAL */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+        .modal-overlay.show { display: flex; animation: fadeIn 0.2s ease; }
+        @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+        .modal-box { background: #0d0d14; border-radius: 20px; width: 100%; max-width: 440px; padding: 2rem; color: #e8e8f0; position: relative; animation: slideUp 0.3s ease; border: 1px solid #2a2a3a; }
+        @keyframes slideUp { from{transform:translateY(30px);opacity:0} to{transform:translateY(0);opacity:1} }
+
+        .modal-close { position: absolute; top: 1rem; right: 1rem; background: #1a1a2a; border: 1px solid #2a2a3a; color: #6b6b80; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+        .modal-close:hover { background: #2a2a3a; color: #fff; }
+
+        .modal-title { font-size: 1.3rem; font-weight: 700; margin-bottom: 0.25rem; }
+        .modal-title span { color: #00e5ff; }
+        .modal-subtitle { font-size: 0.8rem; color: #6b6b80; font-family: 'DM Mono', monospace; margin-bottom: 1.5rem; }
+
+        .card-visual { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); border: 1px solid #2a2a3a; border-radius: 16px; padding: 1.5rem; margin-bottom: 1.5rem; position: relative; overflow: hidden; }
+        .card-visual::before { content: ''; position: absolute; top: -30px; right: -30px; width: 120px; height: 120px; border-radius: 50%; background: radial-gradient(circle, rgba(0,229,255,0.2), transparent 70%); }
+        .card-chip { width: 36px; height: 26px; background: linear-gradient(135deg, #d4a843, #f0c86a); border-radius: 5px; margin-bottom: 1.2rem; }
+        .card-num { font-family: 'DM Mono', monospace; font-size: 1.1rem; letter-spacing: 0.15em; margin-bottom: 1.2rem; }
+        .card-bottom-row { display: flex; justify-content: space-between; }
+        .card-lbl { font-size: 0.6rem; color: #6b6b80; text-transform: uppercase; letter-spacing: 0.1em; }
+        .card-val { font-family: 'DM Mono', monospace; font-size: 0.85rem; }
+
+        .resumen-modal { background: #1a1a2a; border-radius: 10px; padding: 0.75rem 1rem; margin-bottom: 1.25rem; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; border: 1px solid #2a2a3a; }
+        .resumen-modal .total-amount { font-weight: 700; color: #00e676; font-size: 1.1rem; font-family: 'DM Mono', monospace; }
+
+        .m-field { margin-bottom: 1rem; }
+        .m-label { display: block; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #6b6b80; margin-bottom: 0.4rem; }
+        .m-input { width: 100%; background: #1a1a2a; border: 1px solid #2a2a3a; border-radius: 10px; padding: 0.75rem 0.875rem; font-family: 'DM Mono', monospace; font-size: 0.9rem; color: #e8e8f0; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+        .m-input:focus { border-color: #00e5ff; box-shadow: 0 0 0 3px rgba(0,229,255,0.1); }
+        .m-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+
+        .btn-pay { width: 100%; padding: 0.9rem; background: linear-gradient(135deg, #7b2fff, #00e5ff); border: none; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 700; color: #fff; cursor: pointer; transition: opacity 0.2s; margin-top: 0.25rem; }
+        .btn-pay:hover { opacity: 0.9; }
+        .btn-pay:disabled { opacity: 0.5; cursor: not-allowed; }
+        .pay-spinner { display: none; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto; }
+        @keyframes spin { to{transform:rotate(360deg)} }
+        .btn-pay.loading .pay-text { display: none; }
+        .btn-pay.loading .pay-spinner { display: block; }
+
+        .pay-result { margin-top: 1rem; padding: 0.875rem 1rem; border-radius: 10px; font-size: 0.82rem; display: none; font-family: 'DM Mono', monospace; }
+        .pay-result.success { background: rgba(0,230,118,0.1); border: 1px solid rgba(0,230,118,0.3); color: #00e676; display: block; }
+        .pay-result.error   { background: rgba(255,23,68,0.1);  border: 1px solid rgba(255,23,68,0.3);  color: #ff4444; display: block; }
+        .pay-result-title { font-weight: 700; margin-bottom: 0.25rem; }
+        .pay-result-detail { opacity: 0.8; font-size: 0.75rem; line-height: 1.5; white-space: pre-line; }
+
+        .aks-badge { display: flex; align-items: center; gap: 0.4rem; font-size: 0.7rem; color: #6b6b80; font-family: 'DM Mono', monospace; margin-top: 0.75rem; justify-content: center; }
+        .aks-badge span { color: #00e5ff; }
+
+        @media (max-width: 1024px) { .main { grid-template-columns: 1fr; } .status-pills { display: none; } }
     </style>
 </head>
-<body class="bg-light">
+<body>
 
-<div class="container-fluid px-4 py-3">
-    <div class="row g-3">
-        
-        <div class="col-lg-4">
-            <div class="card shadow-sm mb-3">
-                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                    <span><i class="bi bi-people"></i> Clientes</span>
-                    <button class="btn btn-sm btn-outline-light" onclick="mostrarModalCliente()">+</button>
-                </div>
-                <div class="card-body card-scroll p-0">
-                    <table class="table table-sm table-hover mb-0">
-                        <thead><tr><th>Nombre</th><th>Acción</th></tr></thead>
-                        <tbody>
-                            <tr th:each="c : ${clientes}">
-                                <td th:text="${c.nombre}"></td>
-                                <td class="text-end">
-                                    <button class="btn btn-sm btn-outline-danger" th:onclick="'eliminarCliente(' + ${c.id} + ')'"><i class="bi bi-trash"></i></button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+<nav class="navbar">
+    <div class="navbar-brand">
+        <div class="dot"></div>
+        POS System · Microservicios
+    </div>
+    <div class="status-pills">
+        <div class="pill pill-green"><div class="pill-dot"></div> facturacion :8080</div>
+        <div class="pill pill-green"><div class="pill-dot"></div> tax-service :8081</div>
+        <div class="pill pill-blue"><div class="pill-dot"></div> payment-service · AKS</div>
+    </div>
+</nav>
+
+<div class="main">
+
+    <!-- Columna 1 -->
+    <div style="display:flex;flex-direction:column;gap:1.25rem;">
+        <div class="panel">
+            <div class="panel-header">
+                <span><i class="bi bi-people me-2"></i>Clientes</span>
+                <button class="btn-sm-add" onclick="mostrarModalCliente()">+ Nuevo</button>
             </div>
-
-            <div class="card shadow-sm">
-                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                    <span><i class="bi bi-box"></i> Inventario</span>
-                    <button class="btn btn-sm btn-outline-light" onclick="mostrarModalProducto()">+</button>
-                </div>
-                <div class="card-body card-scroll p-0">
-                    <table class="table table-sm table-hover mb-0">
-                        <thead><tr><th>Nombre</th><th>Stock</th><th>Precio</th><th>Acción</th></tr></thead>
-                        <tbody>
-                            <tr th:each="p : ${productos}">
-                                <td th:text="${p.nombre}"></td>
-                                <td th:text="${p.stock}"></td>
-                                <td th:text="'$' + ${p.precio}"></td>
-                                <td class="text-end">
-                                    <button class="btn btn-sm btn-outline-danger" th:onclick="'eliminarProducto(' + ${p.id} + ')'"><i class="bi bi-trash"></i></button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+            <div class="scroll-area">
+                <table>
+                    <thead><tr><th>Nombre</th><th></th></tr></thead>
+                    <tbody>
+                        <tr th:each="c : ${clientes}">
+                            <td th:text="${c.nombre}"></td>
+                            <td><button class="btn-icon" th:onclick="'eliminarCliente(' + ${c.id} + ')'"><i class="bi bi-trash"></i></button></td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
 
-        <div class="col-lg-5">
-            <div class="card shadow-sm h-100">
-                <div class="card-header bg-primary text-white">
-                    <i class="bi bi-cart-fill"></i> Punto de Venta (Carrito)
-                </div>
-                <div class="card-body">
-                    <div class="row g-2 mb-3">
-                        <div class="col-md-6">
-                            <label class="small">Cliente de la Factura:</label>
-                            <select id="selCliente" class="form-select">
-                                <option value="">-- Seleccionar --</option>
-                                <option th:each="c : ${clientes}" th:value="${c.id}" th:text="${c.nombre}"></option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="small">Agregar Producto:</label>
-                            <select id="selProducto" class="form-select" onchange="agregarAlCarrito(this)">
-                                <option value="">-- Buscar Producto --</option>
-                                <option th:each="p : ${productos}" th:value="${p.id}" 
-                                        th:data-precio="${p.precio}" th:data-nombre="${p.nombre}"
-                                        th:text="${p.nombre} + ' ($' + ${p.precio} + ')'"></option>
-                            </select>
-                        </div>
-                    </div>
+        <div class="panel">
+            <div class="panel-header">
+                <span><i class="bi bi-box me-2"></i>Inventario</span>
+                <button class="btn-sm-add" onclick="mostrarModalProducto()">+ Nuevo</button>
+            </div>
+            <div class="scroll-area">
+                <table>
+                    <thead><tr><th>Producto</th><th>Stock</th><th>Precio</th><th></th></tr></thead>
+                    <tbody>
+                        <tr th:each="p : ${productos}">
+                            <td th:text="${p.nombre}"></td>
+                            <td th:text="${p.stock}"></td>
+                            <td th:text="'$' + ${p.precio}"></td>
+                            <td><button class="btn-icon" th:onclick="'eliminarProducto(' + ${p.id} + ')'"><i class="bi bi-trash"></i></button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 
-                    <table class="table table-sm" id="tablaCarrito">
-                        <thead class="table-light"><tr><th>Item</th><th>Cant</th><th>Sub</th><th></th></tr></thead>
-                        <tbody></tbody>
-                    </table>
+    <!-- Columna 2: Carrito -->
+    <div class="panel">
+        <div class="panel-header blue">
+            <span><i class="bi bi-cart-fill me-2"></i>Punto de Venta</span>
+        </div>
+        <div class="carrito-body">
+            <div class="row g-2 mb-3">
+                <div class="col-md-6">
+                    <label class="form-label-sm">Cliente</label>
+                    <select id="selCliente" class="form-ctrl">
+                        <option value="">-- Seleccionar cliente --</option>
+                        <option th:each="c : ${clientes}" th:value="${c.id}" th:text="${c.nombre}"></option>
+                    </select>
                 </div>
+                <div class="col-md-6">
+                    <label class="form-label-sm">Agregar Producto</label>
+                    <select id="selProducto" class="form-ctrl" onchange="agregarAlCarrito(this)">
+                        <option value="">-- Buscar producto --</option>
+                        <option th:each="p : ${productos}" th:value="${p.id}"
+                                th:data-precio="${p.precio}" th:data-nombre="${p.nombre}"
+                                th:text="${p.nombre} + ' ($' + ${p.precio} + ')'"></option>
+                    </select>
+                </div>
+            </div>
+            <table id="tablaCarrito">
+                <thead><tr><th>Item</th><th>Cant</th><th>Subtotal</th><th></th></tr></thead>
+                <tbody>
+                    <tr><td colspan="4" class="empty-cart"><i class="bi bi-cart me-2"></i>Agrega productos al carrito</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Columna 3: Resumen -->
+    <div style="display:flex;flex-direction:column;gap:1.25rem;">
+        <div class="panel">
+            <div class="panel-header"><span><i class="bi bi-receipt me-2"></i>Resumen Legal</span></div>
+            <div class="resumen-body">
+                <div class="resumen-row">
+                    <span>Subtotal</span><span id="resSubtotal">$0.00</span>
+                </div>
+                <div class="resumen-row" style="color:var(--primary)">
+                    <span><i class="bi bi-calculator me-1"></i>IVA (Tax-Service)</span>
+                    <span id="resIva">$0.00</span>
+                </div>
+                <div class="resumen-total">
+                    <span>TOTAL</span>
+                    <span id="resTotal" class="amount">$0.00</span>
+                </div>
+            </div>
+
+            <div class="metodo-pago">
+                <div class="metodo-label">Método de pago</div>
+                <div class="metodo-btns">
+                    <div class="metodo-btn active" id="btnEfectivo" onclick="selMetodo('efectivo')">
+                        <i class="bi bi-cash me-1"></i> Efectivo
+                    </div>
+                    <div class="metodo-btn" id="btnTarjeta" onclick="selMetodo('tarjeta')">
+                        <i class="bi bi-credit-card me-1"></i> Tarjeta
+                    </div>
+                </div>
+            </div>
+
+            <div style="padding:0 1.25rem 1.25rem;">
+                <button class="btn-generar" id="btnGenerar" onclick="generarFactura()">
+                    <i class="bi bi-printer me-2"></i>GENERAR FACTURA
+                </button>
+                <button class="btn-tarjeta" id="btnPagarTarjeta" onclick="abrirModalPago()">
+                    <i class="bi bi-credit-card me-2"></i>PAGAR CON TARJETA
+                </button>
             </div>
         </div>
 
-        <div class="col-lg-3">
-            <div class="sticky-top">
-                <div class="card shadow border-primary border-2">
-                    <div class="card-body">
-                        <h5 class="text-center mb-3">Resumen Legal</h5>
-                        <div class="d-flex justify-content-between mb-2">
-                            <span>Subtotal:</span>
-                            <span id="resSubtotal">$0.00</span>
-                        </div>
-                        <div class="d-flex justify-content-between mb-2 text-primary">
-                            <span>IVA (Tax-Service):</span>
-                            <span id="resIva">$0.00</span>
-                        </div>
-                        <hr>
-                        <div class="d-flex justify-content-between h4 mb-4">
-                            <span>TOTAL:</span>
-                            <span id="resTotal" class="text-success">$0.00</span>
-                        </div>
-                        <button class="btn btn-success w-100 py-3 fw-bold" onclick="generarFactura()">
-                            <i class="bi bi-printer me-2"></i>GENERAR FACTURA
-                        </button>
-                    </div>
-                </div>
-                <div class="mt-3 small text-muted text-center">
-                    <i class="bi bi-hdd-network"></i> Status: Connected to <b>tax-service:8081</b>
-                </div>
+        <div class="panel" style="padding:0.75rem 1rem;">
+            <div style="font-size:0.7rem;color:var(--muted);font-family:'DM Mono',monospace;line-height:1.8;">
+                <div><span style="color:#057a55;">●</span> VM · facturacion :8080</div>
+                <div><span style="color:#057a55;">●</span> VM · tax-service :8081</div>
+                <div><span style="color:var(--primary);">●</span> AKS · payment-service · 9.169.238.191</div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL PAGO TARJETA -->
+<div class="modal-overlay" id="modalPago">
+    <div class="modal-box">
+        <button class="modal-close" onclick="cerrarModalPago()">✕</button>
+        <div class="modal-title">Pago con <span>Tarjeta</span></div>
+        <div class="modal-subtitle">// payment-service · Kubernetes AKS · 9.169.238.191</div>
+
+        <div class="card-visual">
+            <div class="card-chip"></div>
+            <div class="card-num" id="cardDisplay">•••• •••• •••• ••••</div>
+            <div class="card-bottom-row">
+                <div><div class="card-lbl">Titular</div><div class="card-val" id="cardName">NOMBRE APELLIDO</div></div>
+                <div><div class="card-lbl">Vence</div><div class="card-val" id="cardExpiry">MM/AA</div></div>
+                <div><div class="card-lbl">Total</div><div class="card-val" id="cardTotal" style="color:#00e676;">$0.00</div></div>
+            </div>
+        </div>
+
+        <div class="resumen-modal">
+            <span style="color:#6b6b80;font-size:0.8rem;">Total a cobrar</span>
+            <span class="total-amount" id="modalTotal">$0.00</span>
+        </div>
+
+        <div class="m-field">
+            <label class="m-label">Número de tarjeta</label>
+            <input class="m-input" type="text" id="mCardNumber" maxlength="19" placeholder="1234 5678 9012 3456" autocomplete="off"/>
+        </div>
+        <div class="m-field">
+            <label class="m-label">Nombre del titular</label>
+            <input class="m-input" type="text" id="mCardHolder" placeholder="Juan Pérez" autocomplete="off"/>
+        </div>
+        <div class="m-row">
+            <div class="m-field">
+                <label class="m-label">Vencimiento</label>
+                <input class="m-input" type="text" id="mExpiry" maxlength="5" placeholder="MM/AA"/>
+            </div>
+            <div class="m-field">
+                <label class="m-label">CVV</label>
+                <input class="m-input" type="text" id="mCvv" maxlength="3" placeholder="123"/>
+            </div>
+        </div>
+
+        <button class="btn-pay" id="btnPay" onclick="procesarPago()">
+            <span class="pay-text">💳 Confirmar pago</span>
+            <div class="pay-spinner"></div>
+        </button>
+
+        <div class="pay-result" id="payResult"></div>
+
+        <div class="aks-badge">
+            <i class="bi bi-hdd-network"></i>
+            Procesado por <span>payment-service</span> en <span>Kubernetes AKS</span>
         </div>
     </div>
 </div>
@@ -127,122 +331,137 @@
 <script>
     let carrito = [];
     let subtotal = 0;
+    let totalConIva = 0;
+    const PAYMENT_URL = 'http://9.169.238.191/payment/card';
+
+    function selMetodo(m) {
+        document.getElementById('btnEfectivo').classList.toggle('active', m === 'efectivo');
+        document.getElementById('btnTarjeta').classList.toggle('active', m === 'tarjeta');
+        document.getElementById('btnGenerar').style.display    = m === 'efectivo' ? 'block' : 'none';
+        document.getElementById('btnPagarTarjeta').style.display = m === 'tarjeta' ? 'block' : 'none';
+    }
 
     function agregarAlCarrito(select) {
-        const option = select.options[select.selectedIndex];
-        if (!option.value) return;
-
-        const item = {
-            id: parseInt(option.value),
-            nombre: option.getAttribute('data-nombre'),
-            precio: parseFloat(option.getAttribute('data-precio')),
-            cantidad: 1
-        };
-
+        const opt = select.options[select.selectedIndex];
+        if (!opt.value) return;
+        const item = { id: parseInt(opt.value), nombre: opt.getAttribute('data-nombre'), precio: parseFloat(opt.getAttribute('data-precio')), cantidad: 1 };
         const existe = carrito.find(i => i.id === item.id);
-        if (existe) { existe.cantidad++; } else { carrito.push(item); }
-        
-        recalcular(); 
-        select.value = "";
+        if (existe) existe.cantidad++; else carrito.push(item);
+        recalcular();
+        select.value = '';
     }
 
     async function recalcular() {
-        subtotal = carrito.reduce((acc, item) => acc + (item.precio * item.cantidad), 0);
-        
-        const lblSubtotal = document.getElementById('resSubtotal');
+        subtotal = carrito.reduce((acc, i) => acc + (i.precio * i.cantidad), 0);
+        document.getElementById('resSubtotal').innerText = `$${subtotal.toFixed(2)}`;
         const lblIva = document.getElementById('resIva');
         const lblTotal = document.getElementById('resTotal');
-        const btnGenerar = document.querySelector('button[onclick="generarFactura()"]');
-
-        lblSubtotal.innerText = `$${subtotal.toFixed(2)}`;
-
-        lblIva.innerHTML = '<span class="spinner-border spinner-border-sm text-primary"></span>';
-        btnGenerar.disabled = true;
-
-        if (subtotal === 0) {
-            lblIva.innerText = "$0.00";
-            lblTotal.innerText = "$0.00";
-            btnGenerar.disabled = false;
-            renderCarrito();
-            return;
-        }
-
+        if (subtotal === 0) { lblIva.innerText = '$0.00'; lblTotal.innerText = '$0.00'; totalConIva = 0; renderCarrito(); return; }
+        lblIva.innerHTML = '<span class="spinner-border spinner-border-sm text-primary" style="width:14px;height:14px;"></span>';
+        document.getElementById('btnGenerar').disabled = true;
+        document.getElementById('btnPagarTarjeta').disabled = true;
         try {
-            const response = await fetch(`/api/facturas/calcular-previa?subtotal=${subtotal}`);
-            
-            if (response.ok) {
-                const taxData = await response.json();
-                
-                lblIva.innerText = `$${taxData.iva.toFixed(2)}`;
-                lblTotal.innerText = `$${taxData.total.toFixed(2)}`;
-            } else {
-                console.error("Error calculando impuestos");
-                lblIva.innerText = "Error";
-            }
-        } catch (e) {
-            console.error("Error de conexión:", e);
-            lblIva.innerText = "Sin conexión";
-        } finally {
-            // 6. Rehabilitar botón y actualizar tabla
-            btnGenerar.disabled = false;
-            renderCarrito();
-        }
+            const r = await fetch(`/api/facturas/calcular-previa?subtotal=${subtotal}`);
+            if (r.ok) {
+                const d = await r.json();
+                lblIva.innerText = `$${d.iva.toFixed(2)}`;
+                lblTotal.innerText = `$${d.total.toFixed(2)}`;
+                totalConIva = d.total;
+            } else { lblIva.innerText = 'Error'; }
+        } catch { lblIva.innerText = 'Sin conexión'; totalConIva = subtotal; }
+        finally { document.getElementById('btnGenerar').disabled = false; document.getElementById('btnPagarTarjeta').disabled = false; renderCarrito(); }
     }
 
     function renderCarrito() {
-        const tbody = document.querySelector("#tablaCarrito tbody");
-        tbody.innerHTML = carrito.map((item, index) => `
-            <tr>
-                <td>${item.nombre}</td>
-                <td>${item.cantidad}</td>
-                <td>$${(item.precio * item.cantidad).toFixed(2)}</td>
-                <td><button class="btn btn-sm text-danger" onclick="remover(${index})">x</button></td>
-            </tr>
-        `).join('');
+        const tbody = document.querySelector('#tablaCarrito tbody');
+        if (carrito.length === 0) { tbody.innerHTML = '<tr><td colspan="4" class="empty-cart"><i class="bi bi-cart me-2"></i>Agrega productos al carrito</td></tr>'; return; }
+        tbody.innerHTML = carrito.map((item, i) => `<tr><td>${item.nombre}</td><td>${item.cantidad}</td><td>$${(item.precio * item.cantidad).toFixed(2)}</td><td><button class="btn-icon" onclick="remover(${i})"><i class="bi bi-x"></i></button></td></tr>`).join('');
     }
 
-    function remover(index) {
-        carrito.splice(index, 1);
-        recalcular();
-    }
+    function remover(i) { carrito.splice(i, 1); recalcular(); }
 
     async function generarFactura() {
         const clienteId = document.getElementById('selCliente').value;
-        if (!clienteId || carrito.length === 0) return alert("Seleccione cliente y productos");
-
-        const payload = {
-            cliente: { id: parseInt(clienteId) },
-            detalles: carrito.map(i => ({ producto: { id: i.id }, cantidad: i.cantidad }))
-        };
-
-        const btn = event.target;
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Procesando...';
-
+        if (!clienteId || carrito.length === 0) return alert('Seleccione cliente y productos');
+        const payload = { cliente: { id: parseInt(clienteId) }, detalles: carrito.map(i => ({ producto: { id: i.id }, cantidad: i.cantidad })) };
+        const btn = document.getElementById('btnGenerar');
+        btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Procesando...';
         try {
-            const response = await fetch('/api/facturas', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(payload)
-            });
-
-            if (response.ok) {
-                alert("✅ Factura generada con éxito. PDF enviado por correo.");
-                location.reload();
-            } else {
-                alert("❌ Error: " + await response.text());
-                btn.disabled = false;
-                btn.innerHTML = '<i class="bi bi-printer me-2"></i>GENERAR FACTURA';
-            }
-        } catch (e) {
-            alert("❌ Error de comunicación");
-            btn.disabled = false;
-            btn.innerHTML = '<i class="bi bi-printer me-2"></i>GENERAR FACTURA';
-        }
+            const r = await fetch('/api/facturas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (r.ok) { alert('✅ Factura generada. PDF enviado por correo.'); location.reload(); }
+            else { alert('❌ Error: ' + await r.text()); }
+        } catch { alert('❌ Error de comunicación'); }
+        finally { btn.disabled = false; btn.innerHTML = '<i class="bi bi-printer me-2"></i>GENERAR FACTURA'; }
     }
 
-    function eliminarProducto(id) { if(confirm('¿Eliminar?')) fetch('/api/productos/'+id, {method:'DELETE'}).then(()=>location.reload()); }
-    function eliminarCliente(id) { if(confirm('¿Eliminar?')) fetch('/api/clientes/'+id, {method:'DELETE'}).then(()=>location.reload()); }
+    function abrirModalPago() {
+        if (carrito.length === 0) return alert('Agrega productos al carrito');
+        const total = totalConIva || subtotal;
+        document.getElementById('modalTotal').innerText = `$${total.toFixed(2)}`;
+        document.getElementById('cardTotal').innerText  = `$${total.toFixed(2)}`;
+        document.getElementById('payResult').className  = 'pay-result';
+        document.getElementById('modalPago').classList.add('show');
+    }
+
+    function cerrarModalPago() { document.getElementById('modalPago').classList.remove('show'); }
+
+    document.getElementById('mCardNumber').addEventListener('input', function(e) {
+        let v = e.target.value.replace(/\D/g,'').substring(0,16);
+        e.target.value = v.replace(/(.{4})/g,'$1 ').trim();
+        document.getElementById('cardDisplay').textContent = v.padEnd(16,'•').replace(/(.{4})/g,'$1 ').trim();
+    });
+    document.getElementById('mCardHolder').addEventListener('input', function(e) {
+        document.getElementById('cardName').textContent = e.target.value.toUpperCase() || 'NOMBRE APELLIDO';
+    });
+    document.getElementById('mExpiry').addEventListener('input', function(e) {
+        let v = e.target.value.replace(/\D/g,'').substring(0,4);
+        if (v.length >= 2) v = v.slice(0,2)+'/'+v.slice(2);
+        e.target.value = v;
+        document.getElementById('cardExpiry').textContent = v || 'MM/AA';
+    });
+
+    async function procesarPago() {
+        const card   = document.getElementById('mCardNumber').value.replace(/\s/g,'');
+        const name   = document.getElementById('mCardHolder').value;
+        const expiry = document.getElementById('mExpiry').value;
+        const cvv    = document.getElementById('mCvv').value;
+        const amount = totalConIva || subtotal;
+
+        if (!card || !name || !expiry || !cvv) { mostrarRes('error','⚠️ Campos incompletos','Completa todos los datos de la tarjeta.'); return; }
+
+        const btn = document.getElementById('btnPay');
+        btn.classList.add('loading'); btn.disabled = true;
+        document.getElementById('payResult').className = 'pay-result';
+
+        try {
+            const r = await fetch(PAYMENT_URL, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({card, name, expiry, cvv, amount}) });
+            const data = await r.json();
+            if (r.ok) {
+                mostrarRes('success', '✅ Pago aprobado', `${data.status} · ${data.message}`);
+                setTimeout(() => generarFacturaTarjeta(), 1500);
+            } else { mostrarRes('error','❌ Pago rechazado', JSON.stringify(data)); }
+        } catch(err) { mostrarRes('error','🔌 Sin conexión al payment-service', err.message); }
+        finally { btn.classList.remove('loading'); btn.disabled = false; }
+    }
+
+    function mostrarRes(tipo, titulo, detalle) {
+        const el = document.getElementById('payResult');
+        el.className = 'pay-result ' + tipo;
+        el.innerHTML = `<div class="pay-result-title">${titulo}</div><div class="pay-result-detail">${detalle}</div>`;
+    }
+
+    async function generarFacturaTarjeta() {
+        const clienteId = document.getElementById('selCliente').value;
+        if (!clienteId) return;
+        const payload = { cliente: { id: parseInt(clienteId) }, detalles: carrito.map(i => ({ producto: { id: i.id }, cantidad: i.cantidad })) };
+        try {
+            const r = await fetch('/api/facturas', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+            if (r.ok) { setTimeout(() => { alert('✅ Pago y factura completados. PDF enviado por correo.'); cerrarModalPago(); location.reload(); }, 500); }
+        } catch {}
+    }
+
+    function eliminarProducto(id) { if(confirm('¿Eliminar?')) fetch('/api/productos/'+id,{method:'DELETE'}).then(()=>location.reload()); }
+    function eliminarCliente(id)  { if(confirm('¿Eliminar?')) fetch('/api/clientes/'+id, {method:'DELETE'}).then(()=>location.reload()); }
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
