@@ -250,7 +250,7 @@
     btnBuscar.disabled = true;
 
     try {
-      const res = await fetch(`${CLIENTES_URL}/api/clientes`);
+const res = await fetch(`/api/proxy/clientes`);
       if (!res.ok) throw new Error('Error al conectar con microservicio de clientes');
 
       const lista = await res.json();
