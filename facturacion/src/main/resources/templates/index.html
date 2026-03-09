@@ -120,7 +120,10 @@
           <input type="email" id="emailNuevo" placeholder="juan@email.com"/>
         </div>
         <div style="font-size:0.75rem;color:var(--muted);margin-bottom:1rem;font-family:'Space Mono',monospace;">
-          ⚠️ Cliente no encontrado — se registrará automáticamente
+          ⚠️ Cliente no encontrado —
+          <a th:href="${clientesUrl} + '/clientes/web'" href="#" target="_blank"
+             style="color:var(--accent);text-decoration:none;">registrar aquí</a>
+          y luego volver a buscar
         </div>
       </div>
 
@@ -237,28 +240,42 @@
     }
   }
 
-  // ENDPOINT CORRECTO: ?cedula= (devuelve lista)
+  // ── BUSCAR CLIENTE: trae todos y filtra por cédula en frontend ──
   async function buscarCliente() {
     const cedula = document.getElementById('cedula').value.trim();
     if (!cedula || cedula.length < 10) { alert('Ingresa una cédula válida de 10 dígitos'); return; }
+
+    const btnBuscar = document.querySelector('button[onclick="buscarCliente()"]');
+    btnBuscar.textContent = '...';
+    btnBuscar.disabled = true;
+
     try {
-      const res = await fetch(`${CLIENTES_URL}/api/clientes?cedula=${cedula}`);
-      if (res.ok) {
-        const lista = await res.json();
-        if (lista && lista.length > 0) {
-          clienteActual = lista[0];
-          document.getElementById('clienteNombre').textContent = (clienteActual.nombre||'') + ' ' + (clienteActual.apellido||'');
-          document.getElementById('clienteEmail').textContent  = clienteActual.correo || clienteActual.email || '';
-          document.getElementById('clienteBox').style.display   = 'block';
-          document.getElementById('clienteNuevo').style.display = 'none';
-          return;
-        }
+      const res = await fetch(`${CLIENTES_URL}/api/clientes`);
+      if (!res.ok) throw new Error('Error al conectar con microservicio de clientes');
+
+      const lista = await res.json();
+      // Filtrar por cédula en el frontend
+      const cliente = lista.find(c => c.cedula === cedula);
+
+      if (cliente) {
+        clienteActual = cliente;
+        document.getElementById('clienteNombre').textContent = (cliente.nombre||'') + ' ' + (cliente.apellido||'');
+        document.getElementById('clienteEmail').textContent  = cliente.email || cliente.correo || '';
+        document.getElementById('clienteBox').style.display   = 'block';
+        document.getElementById('clienteNuevo').style.display = 'none';
+      } else {
+        // No existe — mostrar link para registrar en microservicio del compañero
+        clienteActual = null;
+        document.getElementById('clienteBox').style.display   = 'none';
+        document.getElementById('clienteNuevo').style.display = 'block';
       }
-      throw new Error('no encontrado');
     } catch(e) {
       clienteActual = null;
       document.getElementById('clienteBox').style.display   = 'none';
       document.getElementById('clienteNuevo').style.display = 'block';
+    } finally {
+      btnBuscar.textContent = 'Buscar';
+      btnBuscar.disabled = false;
     }
   }
 
@@ -275,9 +292,10 @@
 
     const cedulaCliente = document.getElementById('cedula').value.trim();
     let nombreCliente, emailCliente;
+
     if (clienteActual) {
       nombreCliente = (clienteActual.nombre||'') + ' ' + (clienteActual.apellido||'');
-      emailCliente  = clienteActual.correo || clienteActual.email || '';
+      emailCliente  = clienteActual.email || clienteActual.correo || '';
     } else {
       nombreCliente = document.getElementById('nombreNuevo').value.trim();
       emailCliente  = document.getElementById('emailNuevo').value.trim();
