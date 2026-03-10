@@ -170,7 +170,6 @@
 <script>
   const cfg           = document.getElementById('config');
   const PRODUCTOS_URL = cfg.dataset.productos;
-  const CLIENTES_URL  = cfg.dataset.clientes;
   const PAYMENT_URL   = cfg.dataset.payment + '/payment/card';
   const FACTURA_URL   = '/api/facturas';
   const TAX_URL       = '/api/facturas/calcular-previa';
@@ -180,13 +179,13 @@
   let metodo        = 'efectivo';
   let totalFinal    = 0;
 
-  // Normaliza el carrito sin importar si viene con name/price o nombre/precio
+  // Normaliza sin importar si viene name/price/quantity o nombre/precio/cantidad
   function normalizarProducto(p) {
     return {
       id:       p.id,
       nombre:   p.nombre   ?? p.name     ?? 'Sin nombre',
-      precio:   parseFloat(p.precio ?? p.price    ?? 0),
-      cantidad: parseInt(  p.cantidad ?? p.quantity ?? 1),
+      precio:   parseFloat(p.precio      ?? p.price    ?? 0),
+      cantidad: parseInt(  p.cantidad    ?? p.quantity ?? 1),
       imagen:   p.imagen   ?? p.image    ?? null
     };
   }
@@ -196,8 +195,7 @@
     const carritoParam = params.get('carrito');
     if (carritoParam) {
       try {
-        const raw = JSON.parse(decodeURIComponent(carritoParam));
-        carrito = raw.map(normalizarProducto);
+        carrito = JSON.parse(decodeURIComponent(carritoParam)).map(normalizarProducto);
         renderCarrito();
       } catch(e) {
         console.error('Error parseando carrito:', e);
@@ -232,7 +230,8 @@
     if (!carrito.length) { mostrarCarritoVacio(); return; }
     document.getElementById('carritoItems').innerHTML = carrito.map(p => `
       <div class="carrito-item">
-        <img src="${p.imagen ? PRODUCTOS_URL + p.imagen : 'https://via.placeholder.com/56'}" onerror="this.src='https://via.placeholder.com/56'"/>
+        <img src="${p.imagen ? PRODUCTOS_URL + p.imagen : 'https://via.placeholder.com/56'}"
+             onerror="this.src='https://via.placeholder.com/56'"/>
         <div class="item-info">
           <div class="item-nombre">${p.nombre}</div>
           <div class="item-meta">Cant: ${p.cantidad} × $${p.precio.toFixed(2)}</div>
@@ -251,7 +250,7 @@
       document.getElementById('cardTotal').textContent = '$' + data.total.toFixed(2);
       totalFinal = data.total;
     } catch(e) {
-      // fallback manual si tax-service no responde
+      // Fallback manual si tax-service no responde
       const iva = sub * 0.15;
       totalFinal = sub + iva;
       document.getElementById('subtotal').textContent  = '$' + sub.toFixed(2);
@@ -270,20 +269,21 @@
     btnBuscar.disabled = true;
 
     try {
-      const res = await fetch(`/api/proxy/clientes`);
+      const res = await fetch('/api/proxy/clientes');
       if (!res.ok) throw new Error('Error al conectar con microservicio de clientes');
 
       const lista = await res.json();
+      // Busca por cualquier campo que use el Grupo 1 para la cédula
       const cliente = lista.find(c =>
-        c.cedula === cedula ||
+        c.cedula         === cedula ||
         c.identificacion === cedula ||
-        c.dni === cedula
+        c.dni            === cedula
       );
 
       if (cliente) {
         clienteActual = cliente;
-        const nombreCompleto = [cliente.nombre, cliente.apellido].filter(Boolean).join(' ');
-        document.getElementById('clienteNombre').textContent = nombreCompleto || 'Cliente encontrado';
+        const nombre = [cliente.nombre, cliente.apellido].filter(Boolean).join(' ');
+        document.getElementById('clienteNombre').textContent = nombre || 'Cliente encontrado';
         document.getElementById('clienteEmail').textContent  = cliente.email || cliente.correo || '';
         document.getElementById('clienteBox').style.display   = 'block';
         document.getElementById('clienteNuevo').style.display = 'none';
@@ -315,8 +315,9 @@
     if (!carrito.length) { showResult('error','⚠️ Carrito vacío','No hay productos para facturar.'); return; }
 
     const cedulaCliente = document.getElementById('cedula').value.trim();
-    let nombreCliente, emailCliente;
+    if (!cedulaCliente) { showResult('error','⚠️ Falta cédula','Busca un cliente primero.'); return; }
 
+    let nombreCliente, emailCliente;
     if (clienteActual) {
       nombreCliente = [clienteActual.nombre, clienteActual.apellido].filter(Boolean).join(' ');
       emailCliente  = clienteActual.email || clienteActual.correo || '';
@@ -332,14 +333,14 @@
     btn.classList.add('loading'); btn.disabled = true;
 
     try {
-      // PASO 1 — Pago con tarjeta (si aplica)
+      // ── PASO 1: Pago tarjeta (si aplica) ──────────────────────────────
       if (metodo === 'tarjeta') {
         const card   = document.getElementById('cardNumber').value.replace(/\s/g,'');
         const name   = document.getElementById('cardHolder').value;
         const expiry = document.getElementById('expiry').value;
         const cvv    = document.getElementById('cvv').value;
         if (!card || !name || !expiry || !cvv) {
-          showResult('error','⚠️ Datos de tarjeta incompletos','Completa todos los campos.');
+          showResult('error','⚠️ Tarjeta incompleta','Completa todos los campos.');
           btn.classList.remove('loading'); btn.disabled = false; return;
         }
         const pagoRes = await fetch(PAYMENT_URL, {
@@ -352,31 +353,30 @@
         }
       }
 
-      // PASO 2 — Generar factura
-      // ✅ FIX: mandamos dni (no cedula) y email (no correo) para que el backend lo encuentre
-      const subtotalVal = carrito.reduce((s,p) => s + p.precio * p.cantidad, 0);
+      // ── PASO 2: Generar factura ────────────────────────────────────────
       const facturaRes = await fetch(FACTURA_URL, {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({
           cliente: {
-            dni:    cedulaCliente,   // ✅ campo correcto del modelo Cliente.java
-            nombre: nombreCliente,
-            email:  emailCliente     // ✅ campo correcto del modelo Cliente.java
+            dni:       cedulaCliente,          // ✅ campo real de Cliente.java
+            nombre:    nombreCliente,
+            email:     emailCliente,           // ✅ campo real de Cliente.java
+            direccion: clienteActual?.direccion || ''
           },
           detalles: carrito.map(p => ({
-            producto:       { id: p.id },
-            cantidad:        p.cantidad,
-            precioUnitario:  p.precio,
-            subtotal:        p.precio * p.cantidad
+            productoId:     p.id,              // ✅ id externo sin FK local
+            productoNombre: p.nombre,          // ✅ snapshot del nombre
+            cantidad:       p.cantidad,
+            precioUnitario: p.precio,
+            subtotal:       p.precio * p.cantidad
           })),
           metodoPago: metodo.toUpperCase(),
-          subtotal:   subtotalVal
+          subtotal:   carrito.reduce((s,p) => s + p.precio * p.cantidad, 0)
         })
       });
 
       if (facturaRes.ok) {
-        // PASO 3 — Descontar stock en microservicio Grupo 4
-        console.log('Descontando stock en productos...');
+        // ── PASO 3: Descontar stock en Grupo 4 ────────────────────────
         for (const p of carrito) {
           try {
             await fetch(`/api/proxy/productos/${p.id}/descontar`, {
@@ -384,14 +384,13 @@
               headers: {'Content-Type':'application/json'},
               body: JSON.stringify({ cantidad: p.cantidad })
             });
-            console.log(`Stock descontado para producto ${p.id}`);
-          } catch(stockErr) {
-            // No bloqueamos la factura si falla el stock
-            console.warn(`No se pudo descontar stock del producto ${p.id}:`, stockErr);
+          } catch(e) {
+            console.warn(`Stock no descontado para producto ${p.id}:`, e);
           }
         }
 
-        showResult('success','✅ Factura generada',`Pago ${metodo} procesado\n📧 Factura enviada a ${emailCliente}`);
+        showResult('success','✅ Factura generada',
+          `Pago ${metodo} procesado exitosamente\n📧 Factura enviada a ${emailCliente}`);
         setTimeout(() => { window.location.href = '/'; }, 4000);
       } else {
         const errText = await facturaRes.text();

@@ -5,7 +5,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
-@Repository 
+@Repository
 public interface ClienteRepository extends JpaRepository<Cliente, Long> {
-    Optional<Cliente> findByDni(String dni); // ← AGREGAR ESTO
+    // ✅ FIX: buscar por dni en vez de id
+    Optional<Cliente> findByDni(String dni);
 }

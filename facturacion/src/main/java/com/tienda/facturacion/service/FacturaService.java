@@ -4,20 +4,27 @@ import com.tienda.facturacion.model.*;
 import com.tienda.facturacion.repository.*;
 import com.tienda.facturacion.dto.TaxResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class FacturaService {
 
     @Autowired private FacturaRepository facturaRepo;
-    @Autowired private ProductoRepository productoRepo;
     @Autowired private ClienteRepository clienteRepo;
     @Autowired private EmailService emailService;
     @Autowired private RestTemplate restTemplate;
+
+    // Cuando el Grupo 2 te dé su IP → actualiza application.properties
+    // microservicio.envios.url=http://IP_GRUPO2:PUERTO
+    @Value("${microservicio.envios.url:PENDIENTE}")
+    private String enviosUrl;
 
     public List<Factura> listarTodas() {
         return facturaRepo.findAll();
@@ -26,9 +33,13 @@ public class FacturaService {
     @Transactional
     public Factura procesarVentaECommerce(Factura facturaRequest) {
 
-        // ✅ FIX: ya no busca por id (que llega null)
-        // Busca por dni, si no existe lo crea automáticamente
+        // ── PASO 1: Cliente ─────────────────────────────────────────────
+        // Busca por dni en tu BD local, si no existe lo crea
+        // (el cliente real vive en Grupo 1, aquí solo guardamos referencia)
         String dniRecibido = facturaRequest.getCliente().getDni();
+        if (dniRecibido == null || dniRecibido.isEmpty()) {
+            throw new RuntimeException("DNI del cliente es requerido.");
+        }
 
         Cliente cliente = clienteRepo.findByDni(dniRecibido)
             .orElseGet(() -> {
@@ -36,68 +47,79 @@ public class FacturaService {
                 nuevo.setDni(dniRecibido);
                 nuevo.setNombre(facturaRequest.getCliente().getNombre());
                 nuevo.setEmail(facturaRequest.getCliente().getEmail());
+                nuevo.setDireccion(facturaRequest.getCliente().getDireccion());
+                System.out.println("Cliente guardado localmente: " + dniRecibido);
                 return clienteRepo.save(nuevo);
             });
 
         facturaRequest.setCliente(cliente);
+
+        // ── PASO 2: Detalles ────────────────────────────────────────────
+        // NO buscamos productos en BD local — vienen del frontend (Grupo 4)
         double subtotalGlobal = 0;
 
         for (DetalleFactura detalle : facturaRequest.getDetalles()) {
-            // ✅ FIX: los productos vienen del microservicio externo (Grupo 4)
-            // No buscamos en nuestra BD local, usamos precio/cantidad del request
-            Long productoId = detalle.getProducto().getId();
-
-            // Intentamos buscar en BD local, si no existe creamos uno temporal
-            Producto producto = productoRepo.findById(productoId)
-                .orElseGet(() -> {
-                    Producto temp = new Producto();
-                    temp.setId(productoId);
-                    temp.setNombre("Producto-" + productoId);
-                    temp.setPrecio(detalle.getPrecioUnitario());
-                    temp.setStock(9999); // stock alto porque el real está en Grupo 4
-                    return productoRepo.save(temp);
-                });
-
+            if (detalle.getPrecioUnitario() == null || detalle.getCantidad() == null) {
+                throw new RuntimeException("Precio o cantidad inválidos.");
+            }
             detalle.setFactura(facturaRequest);
-            detalle.setPrecioUnitario(detalle.getPrecioUnitario()); // usa el precio que viene del frontend
             detalle.setSubtotal(detalle.getPrecioUnitario() * detalle.getCantidad());
             subtotalGlobal += detalle.getSubtotal();
         }
 
-        // Calcular IVA via tax-service
-        String url = "http://tax-contenedor:8081/api/tax/calcular?subtotal=" + subtotalGlobal;
+        // ── PASO 3: IVA via tax-service ─────────────────────────────────
+        String taxUrl = "http://tax-service:8081/api/tax/calcular?subtotal=" + subtotalGlobal;
         try {
-            System.out.println("Solicitando IVA para subtotal: " + subtotalGlobal);
-            TaxResponse taxResponse = restTemplate.getForObject(url, TaxResponse.class);
-            if (taxResponse != null) {
-                facturaRequest.setTotal(taxResponse.getTotal());
-                System.out.println("IVA: " + taxResponse.getIva() + " | Total: " + taxResponse.getTotal());
+            TaxResponse tax = restTemplate.getForObject(taxUrl, TaxResponse.class);
+            if (tax != null) {
+                facturaRequest.setTotal(tax.getTotal());
+                System.out.println("IVA: " + tax.getIva() + " | Total: " + tax.getTotal());
             } else {
-                double iva = subtotalGlobal * 0.15;
-                facturaRequest.setTotal(subtotalGlobal + iva);
+                facturaRequest.setTotal(subtotalGlobal * 1.15);
             }
         } catch (Exception e) {
-            System.err.println("Tax-Service no disponible: " + e.getMessage());
-            double iva = subtotalGlobal * 0.15;
-            facturaRequest.setTotal(subtotalGlobal + iva); // fallback manual 15%
+            System.err.println("Tax-Service no disponible, calculando manualmente.");
+            facturaRequest.setTotal(subtotalGlobal * 1.15);
         }
 
-        Factura facturaGuardada = facturaRepo.save(facturaRequest);
+        // ── PASO 4: Guardar factura ─────────────────────────────────────
+        Factura guardada = facturaRepo.save(facturaRequest);
 
-        Factura facturaParaEmail = facturaRepo.findById(facturaGuardada.getId())
-                .orElseThrow(() -> new RuntimeException("Error al recuperar factura para email"));
+        Factura facturaCompleta = facturaRepo.findById(guardada.getId())
+                .orElseThrow(() -> new RuntimeException("Error recuperando factura."));
 
-        emailService.enviarFacturaPdf(facturaParaEmail);
+        // ── PASO 5: Email ───────────────────────────────────────────────
+        try {
+            emailService.enviarFacturaPdf(facturaCompleta);
+        } catch (Exception e) {
+            System.err.println("Error enviando email: " + e.getMessage());
+        }
 
-        return facturaParaEmail;
+        // ── PASO 6: Orden de envío (Grupo 2) ────────────────────────────
+        // Se activa solo cuando tengas la IP — no bloquea la factura
+        if (!enviosUrl.equals("PENDIENTE")) {
+            try {
+                Map<String, Object> envio = new HashMap<>();
+                envio.put("facturaId",     facturaCompleta.getId());
+                envio.put("clienteDni",    facturaCompleta.getCliente().getDni());
+                envio.put("clienteNombre", facturaCompleta.getCliente().getNombre());
+                envio.put("direccion",     facturaCompleta.getCliente().getDireccion());
+                envio.put("productos",     facturaCompleta.getDetalles());
+                restTemplate.postForObject(enviosUrl + "/api/envios", envio, Object.class);
+                System.out.println("Orden de envío creada ✅");
+            } catch (Exception e) {
+                System.err.println("Grupo 2 no disponible: " + e.getMessage());
+            }
+        }
+
+        return facturaCompleta;
     }
 
     public TaxResponse simularImpuesto(Double subtotal) {
-        String url = "http://tax-contenedor:8081/api/tax/calcular?subtotal=" + subtotal;
+        String url = "http://tax-service:8081/api/tax/calcular?subtotal=" + subtotal;
         try {
             return restTemplate.getForObject(url, TaxResponse.class);
         } catch (Exception e) {
-            // fallback: calcular manualmente si tax-service no responde
             double iva = subtotal * 0.15;
             return new TaxResponse(subtotal, iva, subtotal + iva);
         }
