@@ -18,4 +18,15 @@ public class ProxyController {
     public Object obtenerClientes() {
         return restTemplate.getForObject(clientesUrl + "/api/clientes", Object.class);
     }
+    @Value("${microservicio.productos.url}")
+private String productosUrl;
+
+@PutMapping("/productos/reducir-stock")
+public Object reducirStock(@RequestBody Object body) {
+    return restTemplate.postForObject(
+        productosUrl + "/api/productos/reducir-stock", 
+        body, 
+        Object.class
+    );
+}
 }

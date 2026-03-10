@@ -376,17 +376,20 @@
       });
 
       if (facturaRes.ok) {
-        // ── PASO 3: Descontar stock en Grupo 4 ────────────────────────
-        for (const p of carrito) {
-          try {
-            await fetch(`/api/proxy/productos/${p.id}/descontar`, {
-              method: 'PUT',
-              headers: {'Content-Type':'application/json'},
-              body: JSON.stringify({ cantidad: p.cantidad })
-            });
-          } catch(e) {
-            console.warn(`Stock no descontado para producto ${p.id}:`, e);
-          }
+       // ── PASO 3: Reducir stock en Grupo 4 ────────────────────────────
+        try {
+          await fetch('/api/proxy/productos/reducir-stock', {
+            method: 'PUT',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({
+              productos: carrito.map(p => ({
+                id:       p.id,
+                cantidad: p.cantidad
+              }))
+            })
+          });
+        } catch(e) {
+          console.warn('Stock no reducido:', e);
         }
 
         showResult('success','✅ Factura generada',
