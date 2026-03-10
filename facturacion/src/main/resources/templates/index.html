@@ -376,20 +376,16 @@
       });
 
       if (facturaRes.ok) {
-       // ── PASO 3: Reducir stock en Grupo 4 ────────────────────────────
-        try {
-          await fetch('/api/proxy/productos/reducir-stock', {
-            method: 'PUT',
-            headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({
-              productos: carrito.map(p => ({
-                id:       p.id,
-                cantidad: p.cantidad
-              }))
-            })
-          });
-        } catch(e) {
-          console.warn('Stock no reducido:', e);
+     // ── PASO 3: Reducir stock en Grupo 4 ────────────────────────────
+        // Su endpoint usa ?idProducto=X&cantidad=Y (no JSON body)
+        for (const p of carrito) {
+          try {
+            await fetch(`/api/proxy/productos/reducir-stock?idProducto=${p.id}&cantidad=${p.cantidad}`, {
+              method: 'PUT'
+            });
+          } catch(e) {
+            console.warn(`Stock no reducido para producto ${p.id}:`, e);
+          }
         }
 
         showResult('success','✅ Factura generada',

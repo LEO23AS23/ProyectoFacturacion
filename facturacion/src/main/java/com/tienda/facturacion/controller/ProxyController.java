@@ -1,8 +1,6 @@
 package com.tienda.facturacion.controller;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpMethod;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
@@ -25,13 +23,15 @@ public class ProxyController {
         return restTemplate.getForObject(clientesUrl + "/api/clientes", Object.class);
     }
 
-    // ── Productos (Grupo 4) ──────────────────────────────────────────────
+    // ── Productos stock (Grupo 4) ────────────────────────────────────────
+    // Su endpoint usa @RequestParam, no @RequestBody
+    // Llamada: PUT /api/proxy/productos/reducir-stock?idProducto=23&cantidad=1
     @PutMapping("/productos/reducir-stock")
-    public Object reducirStock(@RequestBody Object body) {
-        return restTemplate.postForObject(
-            productosUrl + "/api/productos/reducir-stock",
-            body,
-            Object.class
-        );
+    public Object reducirStock(@RequestParam Integer idProducto,
+                               @RequestParam Integer cantidad) {
+        String url = productosUrl + "/api/productos/reducir-stock"
+                   + "?idProducto=" + idProducto
+                   + "&cantidad=" + cantidad;
+        return restTemplate.postForObject(url, null, Object.class);
     }
 }
