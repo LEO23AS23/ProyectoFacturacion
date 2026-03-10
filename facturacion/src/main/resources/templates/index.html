@@ -81,7 +81,6 @@
 </div>
 
 <div class="layout">
-
   <div>
     <div class="section-title">Resumen del pedido</div>
     <div class="carrito-items" id="carritoItems">
@@ -181,17 +180,14 @@
   let metodo        = 'efectivo';
   let totalFinal    = 0;
 
-  // ─────────────────────────────────────────────────────────────
-  // Normaliza cualquier formato de producto al formato interno
-  // Acepta: { nombre/name, precio/price, cantidad/quantity, imagen/image }
-  // ─────────────────────────────────────────────────────────────
+  // Normaliza el carrito sin importar si viene con name/price o nombre/precio
   function normalizarProducto(p) {
     return {
       id:       p.id,
-      nombre:   p.nombre   ?? p.name        ?? 'Sin nombre',
-      precio:   parseFloat(p.precio   ?? p.price       ?? 0),
-      cantidad: parseInt(  p.cantidad ?? p.quantity    ?? 1),
-      imagen:   p.imagen   ?? p.image       ?? null
+      nombre:   p.nombre   ?? p.name     ?? 'Sin nombre',
+      precio:   parseFloat(p.precio ?? p.price    ?? 0),
+      cantidad: parseInt(  p.cantidad ?? p.quantity ?? 1),
+      imagen:   p.imagen   ?? p.image    ?? null
     };
   }
 
@@ -200,9 +196,6 @@
     const carritoParam = params.get('carrito');
     if (carritoParam) {
       try {
-        // ✅ FIX: normalizamos al parsear, así el resto del código
-        //         siempre usa nombre/precio/cantidad sin importar
-        //         qué formato mandaron los compañeros.
         const raw = JSON.parse(decodeURIComponent(carritoParam));
         carrito = raw.map(normalizarProducto);
         renderCarrito();
@@ -258,7 +251,9 @@
       document.getElementById('cardTotal').textContent = '$' + data.total.toFixed(2);
       totalFinal = data.total;
     } catch(e) {
-      const iva = sub * 0.15; totalFinal = sub + iva;
+      // fallback manual si tax-service no responde
+      const iva = sub * 0.15;
+      totalFinal = sub + iva;
       document.getElementById('subtotal').textContent  = '$' + sub.toFixed(2);
       document.getElementById('iva').textContent       = '$' + iva.toFixed(2);
       document.getElementById('total').textContent     = '$' + totalFinal.toFixed(2);
@@ -266,7 +261,6 @@
     }
   }
 
-  // ── BUSCAR CLIENTE: trae todos y filtra por cédula en frontend ──
   async function buscarCliente() {
     const cedula = document.getElementById('cedula').value.trim();
     if (!cedula || cedula.length < 10) { alert('Ingresa una cédula válida de 10 dígitos'); return; }
@@ -280,14 +274,10 @@
       if (!res.ok) throw new Error('Error al conectar con microservicio de clientes');
 
       const lista = await res.json();
-
-      // El DTO del compañero tiene: id, nombre, apellido, email, direccion
-      // Buscamos por cédula — si el compañero usa "cedula" como campo
-      // también probamos "identificacion" por si acaso
       const cliente = lista.find(c =>
         c.cedula === cedula ||
         c.identificacion === cedula ||
-        String(c.id) === cedula
+        c.dni === cedula
       );
 
       if (cliente) {
@@ -363,12 +353,17 @@
       }
 
       // PASO 2 — Generar factura
+      // ✅ FIX: mandamos dni (no cedula) y email (no correo) para que el backend lo encuentre
       const subtotalVal = carrito.reduce((s,p) => s + p.precio * p.cantidad, 0);
       const facturaRes = await fetch(FACTURA_URL, {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({
-          cliente:    { cedula: cedulaCliente, nombre: nombreCliente, correo: emailCliente },
-          detalles:   carrito.map(p => ({
+          cliente: {
+            dni:    cedulaCliente,   // ✅ campo correcto del modelo Cliente.java
+            nombre: nombreCliente,
+            email:  emailCliente     // ✅ campo correcto del modelo Cliente.java
+          },
+          detalles: carrito.map(p => ({
             producto:       { id: p.id },
             cantidad:        p.cantidad,
             precioUnitario:  p.precio,
@@ -380,6 +375,22 @@
       });
 
       if (facturaRes.ok) {
+        // PASO 3 — Descontar stock en microservicio Grupo 4
+        console.log('Descontando stock en productos...');
+        for (const p of carrito) {
+          try {
+            await fetch(`/api/proxy/productos/${p.id}/descontar`, {
+              method: 'PUT',
+              headers: {'Content-Type':'application/json'},
+              body: JSON.stringify({ cantidad: p.cantidad })
+            });
+            console.log(`Stock descontado para producto ${p.id}`);
+          } catch(stockErr) {
+            // No bloqueamos la factura si falla el stock
+            console.warn(`No se pudo descontar stock del producto ${p.id}:`, stockErr);
+          }
+        }
+
         showResult('success','✅ Factura generada',`Pago ${metodo} procesado\n📧 Factura enviada a ${emailCliente}`);
         setTimeout(() => { window.location.href = '/'; }, 4000);
       } else {
