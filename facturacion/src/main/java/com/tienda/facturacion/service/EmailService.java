@@ -50,8 +50,10 @@ public class EmailService {
 
             if (factura.getDetalles() != null) {
                 for (DetalleFactura detalle : factura.getDetalles()) {
-                    String nombreProd = (detalle.getProducto() != null && detalle.getProducto().getNombre() != null) 
-                                        ? detalle.getProducto().getNombre() 
+                    // ✅ FIX: ya no usamos detalle.getProducto().getNombre()
+                    // ahora el nombre está directo en el detalle
+                    String nombreProd = detalle.getProductoNombre() != null
+                                        ? detalle.getProductoNombre()
                                         : "Producto sin nombre";
 
                     table.addCell(String.valueOf(detalle.getCantidad() != null ? detalle.getCantidad() : 0));
@@ -60,14 +62,14 @@ public class EmailService {
                     table.addCell("$" + (detalle.getSubtotal() != null ? detalle.getSubtotal() : 0.0));
                 }
             }
-            
+
             document.add(table);
             document.add(new Paragraph("\nTOTAL A PAGAR: $" + (factura.getTotal() != null ? factura.getTotal() : 0.0)).setBold());
             document.close();
 
             MimeMessage message = emailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            
+
             String emailDestino = factura.getCliente().getEmail();
             helper.setTo(emailDestino);
             helper.setSubject("Tu Factura de Compra #" + idFactura);
@@ -78,7 +80,7 @@ public class EmailService {
 
         } catch (Exception e) {
             System.err.println("======= ERROR REAL ENCONTRADO =======");
-            e.printStackTrace(); 
+            e.printStackTrace();
             throw new RuntimeException("Error en PDF o Email: " + e.getMessage());
         }
     }
