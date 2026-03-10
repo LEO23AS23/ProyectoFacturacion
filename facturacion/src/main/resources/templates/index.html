@@ -181,13 +181,38 @@
   let metodo        = 'efectivo';
   let totalFinal    = 0;
 
+  // ─────────────────────────────────────────────────────────────
+  // Normaliza cualquier formato de producto al formato interno
+  // Acepta: { nombre/name, precio/price, cantidad/quantity, imagen/image }
+  // ─────────────────────────────────────────────────────────────
+  function normalizarProducto(p) {
+    return {
+      id:       p.id,
+      nombre:   p.nombre   ?? p.name        ?? 'Sin nombre',
+      precio:   parseFloat(p.precio   ?? p.price       ?? 0),
+      cantidad: parseInt(  p.cantidad ?? p.quantity    ?? 1),
+      imagen:   p.imagen   ?? p.image       ?? null
+    };
+  }
+
   window.onload = () => {
     const params = new URLSearchParams(window.location.search);
     const carritoParam = params.get('carrito');
     if (carritoParam) {
-      try { carrito = JSON.parse(decodeURIComponent(carritoParam)); renderCarrito(); }
-      catch(e) { mostrarCarritoVacio(); }
-    } else { mostrarCarritoVacio(); }
+      try {
+        // ✅ FIX: normalizamos al parsear, así el resto del código
+        //         siempre usa nombre/precio/cantidad sin importar
+        //         qué formato mandaron los compañeros.
+        const raw = JSON.parse(decodeURIComponent(carritoParam));
+        carrito = raw.map(normalizarProducto);
+        renderCarrito();
+      } catch(e) {
+        console.error('Error parseando carrito:', e);
+        mostrarCarritoVacio();
+      }
+    } else {
+      mostrarCarritoVacio();
+    }
 
     document.getElementById('cardNumber').addEventListener('input', function(e) {
       let v = e.target.value.replace(/\D/g,'').substring(0,16);
@@ -217,11 +242,12 @@
         <img src="${p.imagen ? PRODUCTOS_URL + p.imagen : 'https://via.placeholder.com/56'}" onerror="this.src='https://via.placeholder.com/56'"/>
         <div class="item-info">
           <div class="item-nombre">${p.nombre}</div>
-          <div class="item-meta">Cant: ${p.cantidad} × $${parseFloat(p.precio).toFixed(2)}</div>
+          <div class="item-meta">Cant: ${p.cantidad} × $${p.precio.toFixed(2)}</div>
         </div>
         <div class="item-precio">$${(p.precio * p.cantidad).toFixed(2)}</div>
       </div>
     `).join('');
+
     const sub = carrito.reduce((s, p) => s + p.precio * p.cantidad, 0);
     try {
       const res  = await fetch(`${TAX_URL}?subtotal=${sub}`);
@@ -250,26 +276,34 @@
     btnBuscar.disabled = true;
 
     try {
-const res = await fetch(`/api/proxy/clientes`);
+      const res = await fetch(`/api/proxy/clientes`);
       if (!res.ok) throw new Error('Error al conectar con microservicio de clientes');
 
       const lista = await res.json();
-      // Filtrar por cédula en el frontend
-      const cliente = lista.find(c => c.cedula === cedula);
+
+      // El DTO del compañero tiene: id, nombre, apellido, email, direccion
+      // Buscamos por cédula — si el compañero usa "cedula" como campo
+      // también probamos "identificacion" por si acaso
+      const cliente = lista.find(c =>
+        c.cedula === cedula ||
+        c.identificacion === cedula ||
+        String(c.id) === cedula
+      );
 
       if (cliente) {
         clienteActual = cliente;
-        document.getElementById('clienteNombre').textContent = (cliente.nombre||'') + ' ' + (cliente.apellido||'');
+        const nombreCompleto = [cliente.nombre, cliente.apellido].filter(Boolean).join(' ');
+        document.getElementById('clienteNombre').textContent = nombreCompleto || 'Cliente encontrado';
         document.getElementById('clienteEmail').textContent  = cliente.email || cliente.correo || '';
         document.getElementById('clienteBox').style.display   = 'block';
         document.getElementById('clienteNuevo').style.display = 'none';
       } else {
-        // No existe — mostrar link para registrar en microservicio del compañero
         clienteActual = null;
         document.getElementById('clienteBox').style.display   = 'none';
         document.getElementById('clienteNuevo').style.display = 'block';
       }
     } catch(e) {
+      console.error('Error buscando cliente:', e);
       clienteActual = null;
       document.getElementById('clienteBox').style.display   = 'none';
       document.getElementById('clienteNuevo').style.display = 'block';
@@ -294,16 +328,21 @@ const res = await fetch(`/api/proxy/clientes`);
     let nombreCliente, emailCliente;
 
     if (clienteActual) {
-      nombreCliente = (clienteActual.nombre||'') + ' ' + (clienteActual.apellido||'');
+      nombreCliente = [clienteActual.nombre, clienteActual.apellido].filter(Boolean).join(' ');
       emailCliente  = clienteActual.email || clienteActual.correo || '';
     } else {
       nombreCliente = document.getElementById('nombreNuevo').value.trim();
       emailCliente  = document.getElementById('emailNuevo').value.trim();
-      if (!nombreCliente || !emailCliente) { showResult('error','⚠️ Datos incompletos','Ingresa nombre y correo.'); return; }
+      if (!nombreCliente || !emailCliente) {
+        showResult('error','⚠️ Datos incompletos','Ingresa nombre y correo.');
+        return;
+      }
     }
 
     btn.classList.add('loading'); btn.disabled = true;
+
     try {
+      // PASO 1 — Pago con tarjeta (si aplica)
       if (metodo === 'tarjeta') {
         const card   = document.getElementById('cardNumber').value.replace(/\s/g,'');
         const name   = document.getElementById('cardHolder').value;
@@ -317,15 +356,24 @@ const res = await fetch(`/api/proxy/clientes`);
           method:'POST', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ card, name, expiry, cvv, amount: totalFinal })
         });
-        if (!pagoRes.ok) { showResult('error','❌ Pago rechazado','El pago con tarjeta no fue aprobado.'); btn.classList.remove('loading'); btn.disabled = false; return; }
+        if (!pagoRes.ok) {
+          showResult('error','❌ Pago rechazado','El pago con tarjeta no fue aprobado.');
+          btn.classList.remove('loading'); btn.disabled = false; return;
+        }
       }
 
+      // PASO 2 — Generar factura
       const subtotalVal = carrito.reduce((s,p) => s + p.precio * p.cantidad, 0);
       const facturaRes = await fetch(FACTURA_URL, {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({
           cliente:    { cedula: cedulaCliente, nombre: nombreCliente, correo: emailCliente },
-          detalles:   carrito.map(p => ({ producto:{ id: p.id }, cantidad: p.cantidad, precioUnitario: p.precio, subtotal: p.precio * p.cantidad })),
+          detalles:   carrito.map(p => ({
+            producto:       { id: p.id },
+            cantidad:        p.cantidad,
+            precioUnitario:  p.precio,
+            subtotal:        p.precio * p.cantidad
+          })),
           metodoPago: metodo.toUpperCase(),
           subtotal:   subtotalVal
         })
@@ -335,7 +383,8 @@ const res = await fetch(`/api/proxy/clientes`);
         showResult('success','✅ Factura generada',`Pago ${metodo} procesado\n📧 Factura enviada a ${emailCliente}`);
         setTimeout(() => { window.location.href = '/'; }, 4000);
       } else {
-        showResult('error','❌ Error al generar factura', await facturaRes.text());
+        const errText = await facturaRes.text();
+        showResult('error','❌ Error al generar factura', errText);
       }
     } catch(e) {
       showResult('error','🔌 Error de conexión', e.message);
