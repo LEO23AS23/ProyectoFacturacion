@@ -22,8 +22,9 @@ public class EmailService {
     private JavaMailSender emailSender;
 
     public void enviarFacturaPdf(Factura factura) {
-        if (factura == null || factura.getCliente() == null || factura.getCliente().getEmail() == null) {
-            throw new RuntimeException("No se puede enviar el correo: Datos del cliente o email faltantes.");
+        // ✅ Ahora usa getCorreo() en vez de getEmail()
+        if (factura == null || factura.getCliente() == null || factura.getCliente().getCorreo() == null) {
+            throw new RuntimeException("No se puede enviar el correo: Datos del cliente o correo faltantes.");
         }
 
         try {
@@ -32,13 +33,18 @@ public class EmailService {
             PdfDocument pdf = new PdfDocument(writer);
             Document document = new Document(pdf);
 
-            String nombreCli = factura.getCliente().getNombre() != null ? factura.getCliente().getNombre() : "Cliente General";
+            // ✅ nombre completo con apellido
+            String nombreCli = factura.getCliente().getNombre() != null
+                ? factura.getCliente().getNombre() + " " + (factura.getCliente().getApellido() != null ? factura.getCliente().getApellido() : "")
+                : "Cliente General";
             String idFactura = factura.getId() != null ? String.valueOf(factura.getId()) : "S/N";
 
             document.add(new Paragraph("TIENDA DE COMPONENTES PC - FACTURA OFICIAL").setBold().setFontSize(20));
-            document.add(new Paragraph("Factura N°: " + idFactura));
-            document.add(new Paragraph("Cliente: " + nombreCli));
-            document.add(new Paragraph("Email: " + factura.getCliente().getEmail()));
+            document.add(new Paragraph("Factura N: " + idFactura));
+            document.add(new Paragraph("Cedula: " + factura.getCliente().getCedula()));
+            document.add(new Paragraph("Cliente: " + nombreCli.trim()));
+            document.add(new Paragraph("Correo: " + factura.getCliente().getCorreo())); // ✅ getCorreo()
+            document.add(new Paragraph("Direccion: " + (factura.getCliente().getDireccion() != null ? factura.getCliente().getDireccion() : "")));
             document.add(new Paragraph("\nDetalle de compra:"));
 
             float[] columnWidths = {100, 300, 100, 100};
@@ -50,12 +56,9 @@ public class EmailService {
 
             if (factura.getDetalles() != null) {
                 for (DetalleFactura detalle : factura.getDetalles()) {
-                    // ✅ FIX: ya no usamos detalle.getProducto().getNombre()
-                    // ahora el nombre está directo en el detalle
                     String nombreProd = detalle.getProductoNombre() != null
                                         ? detalle.getProductoNombre()
                                         : "Producto sin nombre";
-
                     table.addCell(String.valueOf(detalle.getCantidad() != null ? detalle.getCantidad() : 0));
                     table.addCell(nombreProd);
                     table.addCell("$" + (detalle.getPrecioUnitario() != null ? detalle.getPrecioUnitario() : 0.0));
@@ -70,10 +73,10 @@ public class EmailService {
             MimeMessage message = emailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            String emailDestino = factura.getCliente().getEmail();
+            String emailDestino = factura.getCliente().getCorreo(); // ✅ getCorreo()
             helper.setTo(emailDestino);
             helper.setSubject("Tu Factura de Compra #" + idFactura);
-            helper.setText("Hola " + nombreCli + ", adjuntamos tu factura legal.");
+            helper.setText("Hola " + nombreCli.trim() + ", adjuntamos tu factura.");
             helper.addAttachment("Factura_PC.pdf", new ByteArrayResource(outputStream.toByteArray()));
 
             emailSender.send(message);
