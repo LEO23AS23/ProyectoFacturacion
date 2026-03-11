@@ -21,8 +21,6 @@ public class FacturaService {
     @Autowired private EmailService emailService;
     @Autowired private RestTemplate restTemplate;
 
-    // Cuando el Grupo 2 te dé su IP → actualiza application.properties
-    // microservicio.envios.url=http://IP_GRUPO2:PUERTO
     @Value("${microservicio.envios.url:PENDIENTE}")
     private String enviosUrl;
 
@@ -33,80 +31,69 @@ public class FacturaService {
     @Transactional
     public Factura procesarVentaECommerce(Factura facturaRequest) {
 
-        // ── PASO 1: Cliente ─────────────────────────────────────────────
-        // Busca por dni en tu BD local, si no existe lo crea
-        // (el cliente real vive en Grupo 1, aquí solo guardamos referencia)
-        String dniRecibido = facturaRequest.getCliente().getDni();
-        if (dniRecibido == null || dniRecibido.isEmpty()) {
-            throw new RuntimeException("DNI del cliente es requerido.");
+        // PASO 1: Buscar o crear cliente por cedula
+        String cedulaRecibida = facturaRequest.getCliente().getCedula();
+        if (cedulaRecibida == null || cedulaRecibida.isEmpty()) {
+            throw new RuntimeException("Cedula del cliente es requerida.");
         }
 
-        Cliente cliente = clienteRepo.findByDni(dniRecibido)
+        Cliente cliente = clienteRepo.findByCedula(cedulaRecibida)
             .orElseGet(() -> {
                 Cliente nuevo = new Cliente();
-                nuevo.setDni(dniRecibido);
+                nuevo.setCedula(cedulaRecibida);
                 nuevo.setNombre(facturaRequest.getCliente().getNombre());
-                nuevo.setEmail(facturaRequest.getCliente().getEmail());
+                nuevo.setApellido(facturaRequest.getCliente().getApellido());
+                nuevo.setCorreo(facturaRequest.getCliente().getCorreo());
+                nuevo.setTelefono(facturaRequest.getCliente().getTelefono());
                 nuevo.setDireccion(facturaRequest.getCliente().getDireccion());
-                System.out.println("Cliente guardado localmente: " + dniRecibido);
+                nuevo.setEstado("ACTIVO");
                 return clienteRepo.save(nuevo);
             });
 
         facturaRequest.setCliente(cliente);
 
-        // ── PASO 2: Detalles ────────────────────────────────────────────
-        // NO buscamos productos en BD local — vienen del frontend (Grupo 4)
+        // PASO 2: Procesar detalles
         double subtotalGlobal = 0;
-
         for (DetalleFactura detalle : facturaRequest.getDetalles()) {
             if (detalle.getPrecioUnitario() == null || detalle.getCantidad() == null) {
-                throw new RuntimeException("Precio o cantidad inválidos.");
+                throw new RuntimeException("Precio o cantidad invalidos.");
             }
             detalle.setFactura(facturaRequest);
             detalle.setSubtotal(detalle.getPrecioUnitario() * detalle.getCantidad());
             subtotalGlobal += detalle.getSubtotal();
         }
 
-        // ── PASO 3: IVA via tax-service ─────────────────────────────────
+        // PASO 3: IVA via tax-service
         String taxUrl = "http://tax-service:8081/api/tax/calcular?subtotal=" + subtotalGlobal;
         try {
             TaxResponse tax = restTemplate.getForObject(taxUrl, TaxResponse.class);
-            if (tax != null) {
-                facturaRequest.setTotal(tax.getTotal());
-                System.out.println("IVA: " + tax.getIva() + " | Total: " + tax.getTotal());
-            } else {
-                facturaRequest.setTotal(subtotalGlobal * 1.15);
-            }
+            facturaRequest.setTotal(tax != null ? tax.getTotal() : subtotalGlobal * 1.15);
         } catch (Exception e) {
-            System.err.println("Tax-Service no disponible, calculando manualmente.");
             facturaRequest.setTotal(subtotalGlobal * 1.15);
         }
 
-        // ── PASO 4: Guardar factura ─────────────────────────────────────
+        // PASO 4: Guardar factura
         Factura guardada = facturaRepo.save(facturaRequest);
-
         Factura facturaCompleta = facturaRepo.findById(guardada.getId())
                 .orElseThrow(() -> new RuntimeException("Error recuperando factura."));
 
-        // ── PASO 5: Email ───────────────────────────────────────────────
+        // PASO 5: Enviar email con PDF
         try {
             emailService.enviarFacturaPdf(facturaCompleta);
         } catch (Exception e) {
             System.err.println("Error enviando email: " + e.getMessage());
         }
 
-        // ── PASO 6: Orden de envío (Grupo 2) ────────────────────────────
-        // Se activa solo cuando tengas la IP — no bloquea la factura
+        // PASO 6: Crear orden de envio (Grupo 2) cuando haya IP
         if (!enviosUrl.equals("PENDIENTE")) {
             try {
                 Map<String, Object> envio = new HashMap<>();
                 envio.put("facturaId",     facturaCompleta.getId());
-                envio.put("clienteDni",    facturaCompleta.getCliente().getDni());
+                envio.put("clienteCedula", facturaCompleta.getCliente().getCedula());
                 envio.put("clienteNombre", facturaCompleta.getCliente().getNombre());
                 envio.put("direccion",     facturaCompleta.getCliente().getDireccion());
                 envio.put("productos",     facturaCompleta.getDetalles());
                 restTemplate.postForObject(enviosUrl + "/api/envios", envio, Object.class);
-                System.out.println("Orden de envío creada ✅");
             } catch (Exception e) {
                 System.err.println("Grupo 2 no disponible: " + e.getMessage());
             }

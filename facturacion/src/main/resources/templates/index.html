@@ -53,6 +53,8 @@
     .btn { width:100%; padding:1rem; background:linear-gradient(135deg,var(--accent2),var(--accent)); border:none; border-radius:12px; font-family:'Syne',sans-serif; font-size:1rem; font-weight:700; color:#fff; cursor:pointer; transition:opacity 0.2s; }
     .btn:hover { opacity:0.9; }
     .btn:disabled { opacity:0.5; cursor:not-allowed; }
+    .btn-registro { width:100%; padding:0.8rem; background:var(--accent2); border:none; border-radius:10px; font-family:'Syne',sans-serif; font-size:0.9rem; font-weight:700; color:#fff; cursor:pointer; margin-top:0.5rem; transition:opacity 0.2s; }
+    .btn-registro:hover { opacity:0.85; }
     .spinner { display:none; width:18px; height:18px; border:2px solid rgba(255,255,255,0.3); border-top-color:#fff; border-radius:50%; animation:spin 0.7s linear infinite; margin:0 auto; }
     .btn.loading .btn-text { display:none; }
     .btn.loading .spinner { display:block; }
@@ -104,26 +106,48 @@
         </div>
       </div>
 
+      <!-- Cliente encontrado -->
       <div class="cliente-box" id="clienteBox">
         <div class="cliente-nombre" id="clienteNombre"></div>
         <div class="cliente-email" id="clienteEmail"></div>
       </div>
 
+      <!-- Cliente no encontrado → formulario de registro directo en Grupo 1 -->
       <div id="clienteNuevo" style="display:none;">
-        <div class="field">
-          <label>Nombre completo</label>
-          <input type="text" id="nombreNuevo" placeholder="Juan Pérez"/>
+        <div style="font-size:0.75rem;color:var(--error);margin-bottom:1rem;font-family:'Space Mono',monospace;">
+          ⚠️ Cliente no encontrado — registra sus datos:
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Nombre</label>
+            <input type="text" id="nuevoNombre" placeholder="Juan"/>
+          </div>
+          <div class="field">
+            <label>Apellido</label>
+            <input type="text" id="nuevoApellido" placeholder="Pérez"/>
+          </div>
         </div>
         <div class="field">
-          <label>Correo electrónico</label>
-          <input type="email" id="emailNuevo" placeholder="juan@email.com"/>
+          <label>Correo</label>
+          <input type="email" id="nuevoCorreo" placeholder="juan@email.com"/>
         </div>
-        <div style="font-size:0.75rem;color:var(--muted);margin-bottom:1rem;font-family:'Space Mono',monospace;">
-          ⚠️ Cliente no encontrado —
-          <a th:href="${clientesUrl} + '/clientes/web'" href="#" target="_blank"
-             style="color:var(--accent);text-decoration:none;">registrar aquí</a>
-          y luego volver a buscar
+        <div class="row2">
+          <div class="field">
+            <label>Teléfono</label>
+            <input type="text" id="nuevoTelefono" placeholder="0999999999" maxlength="10"/>
+          </div>
+          <div class="field">
+            <label>Edad</label>
+            <input type="number" id="nuevoEdad" placeholder="25" min="1" max="120"/>
+          </div>
         </div>
+        <div class="field">
+          <label>Dirección</label>
+          <input type="text" id="nuevaDireccion" placeholder="Quevedo - Los Ríos"/>
+        </div>
+        <button class="btn-registro" onclick="registrarCliente()">
+          ➕ Registrar cliente
+        </button>
       </div>
 
       <div style="border-top:1px solid var(--border);margin:1.25rem 0;"></div>
@@ -179,7 +203,6 @@
   let metodo        = 'efectivo';
   let totalFinal    = 0;
 
-  // Normaliza sin importar si viene name/price/quantity o nombre/precio/cantidad
   function normalizarProducto(p) {
     return {
       id:       p.id,
@@ -234,7 +257,7 @@
              onerror="this.src='https://via.placeholder.com/56'"/>
         <div class="item-info">
           <div class="item-nombre">${p.nombre}</div>
-          <div class="item-meta">Cant: ${p.cantidad} × $${p.precio.toFixed(2)}</div>
+          <div class="item-meta">Cant: ${p.cantidad} x $${p.precio.toFixed(2)}</div>
         </div>
         <div class="item-precio">$${(p.precio * p.cantidad).toFixed(2)}</div>
       </div>
@@ -242,7 +265,7 @@
 
     const sub = carrito.reduce((s, p) => s + p.precio * p.cantidad, 0);
     try {
-      const res  = await fetch(`${TAX_URL}?subtotal=${sub}`);
+      const res  = await fetch(TAX_URL + '?subtotal=' + sub);
       const data = await res.json();
       document.getElementById('subtotal').textContent  = '$' + data.subtotal.toFixed(2);
       document.getElementById('iva').textContent       = '$' + data.iva.toFixed(2);
@@ -250,7 +273,6 @@
       document.getElementById('cardTotal').textContent = '$' + data.total.toFixed(2);
       totalFinal = data.total;
     } catch(e) {
-      // Fallback manual si tax-service no responde
       const iva = sub * 0.15;
       totalFinal = sub + iva;
       document.getElementById('subtotal').textContent  = '$' + sub.toFixed(2);
@@ -262,7 +284,7 @@
 
   async function buscarCliente() {
     const cedula = document.getElementById('cedula').value.trim();
-    if (!cedula || cedula.length < 10) { alert('Ingresa una cédula válida de 10 dígitos'); return; }
+    if (!cedula || cedula.length < 10) { alert('Ingresa una cedula valida de 10 digitos'); return; }
 
     const btnBuscar = document.querySelector('button[onclick="buscarCliente()"]');
     btnBuscar.textContent = '...';
@@ -271,9 +293,7 @@
     try {
       const res = await fetch('/api/proxy/clientes');
       if (!res.ok) throw new Error('Error al conectar con microservicio de clientes');
-
       const lista = await res.json();
-      // Busca por cualquier campo que use el Grupo 1 para la cédula
       const cliente = lista.find(c =>
         c.cedula         === cedula ||
         c.identificacion === cedula ||
@@ -284,7 +304,7 @@
         clienteActual = cliente;
         const nombre = [cliente.nombre, cliente.apellido].filter(Boolean).join(' ');
         document.getElementById('clienteNombre').textContent = nombre || 'Cliente encontrado';
-        document.getElementById('clienteEmail').textContent  = cliente.email || cliente.correo || '';
+        document.getElementById('clienteEmail').textContent  = cliente.correo || cliente.email || '';
         document.getElementById('clienteBox').style.display   = 'block';
         document.getElementById('clienteNuevo').style.display = 'none';
       } else {
@@ -293,13 +313,62 @@
         document.getElementById('clienteNuevo').style.display = 'block';
       }
     } catch(e) {
-      console.error('Error buscando cliente:', e);
       clienteActual = null;
       document.getElementById('clienteBox').style.display   = 'none';
       document.getElementById('clienteNuevo').style.display = 'block';
     } finally {
       btnBuscar.textContent = 'Buscar';
       btnBuscar.disabled = false;
+    }
+  }
+
+  async function registrarCliente() {
+    const cedula    = document.getElementById('cedula').value.trim();
+    const nombre    = document.getElementById('nuevoNombre').value.trim();
+    const apellido  = document.getElementById('nuevoApellido').value.trim();
+    const correo    = document.getElementById('nuevoCorreo').value.trim();
+    const telefono  = document.getElementById('nuevoTelefono').value.trim();
+    const edad      = document.getElementById('nuevoEdad').value.trim();
+    const direccion = document.getElementById('nuevaDireccion').value.trim();
+
+    if (!nombre || !apellido || !correo || !telefono || !direccion) {
+      alert('Completa todos los campos para registrar el cliente');
+      return;
+    }
+
+    const btnReg = document.querySelector('button[onclick="registrarCliente()"]');
+    btnReg.textContent = 'Registrando...';
+    btnReg.disabled = true;
+
+    try {
+      const res = await fetch('/api/proxy/clientes', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          cedula,
+          nombre,
+          apellido,
+          edad:      parseInt(edad) || 0,
+          correo,
+          telefono,
+          direccion,
+          estado: 'ACTIVO'
+        })
+      });
+
+      if (res.ok) {
+        alert('Cliente registrado exitosamente');
+        document.getElementById('clienteNuevo').style.display = 'none';
+        await buscarCliente();
+      } else {
+        const err = await res.text();
+        alert('Error al registrar cliente: ' + err);
+      }
+    } catch(e) {
+      alert('Error de conexion: ' + e.message);
+    } finally {
+      btnReg.textContent = '+ Registrar cliente';
+      btnReg.disabled = false;
     }
   }
 
@@ -312,35 +381,26 @@
 
   async function procesarPago() {
     const btn = document.getElementById('btnPagar');
-    if (!carrito.length) { showResult('error','⚠️ Carrito vacío','No hay productos para facturar.'); return; }
+    if (!carrito.length) { showResult('error','Carrito vacio','No hay productos para facturar.'); return; }
 
     const cedulaCliente = document.getElementById('cedula').value.trim();
-    if (!cedulaCliente) { showResult('error','⚠️ Falta cédula','Busca un cliente primero.'); return; }
+    if (!cedulaCliente) { showResult('error','Falta cedula','Busca un cliente primero.'); return; }
+    if (!clienteActual) { showResult('error','Cliente no registrado','Registra el cliente primero.'); return; }
 
-    let nombreCliente, emailCliente;
-    if (clienteActual) {
-      nombreCliente = [clienteActual.nombre, clienteActual.apellido].filter(Boolean).join(' ');
-      emailCliente  = clienteActual.email || clienteActual.correo || '';
-    } else {
-      nombreCliente = document.getElementById('nombreNuevo').value.trim();
-      emailCliente  = document.getElementById('emailNuevo').value.trim();
-      if (!nombreCliente || !emailCliente) {
-        showResult('error','⚠️ Datos incompletos','Ingresa nombre y correo.');
-        return;
-      }
-    }
+    const nombreCliente = [clienteActual.nombre, clienteActual.apellido].filter(Boolean).join(' ');
+    const correoCliente = clienteActual.correo || clienteActual.email || '';
 
     btn.classList.add('loading'); btn.disabled = true;
 
     try {
-      // ── PASO 1: Pago tarjeta (si aplica) ──────────────────────────────
+      // PASO 1: Pago con tarjeta
       if (metodo === 'tarjeta') {
         const card   = document.getElementById('cardNumber').value.replace(/\s/g,'');
         const name   = document.getElementById('cardHolder').value;
         const expiry = document.getElementById('expiry').value;
         const cvv    = document.getElementById('cvv').value;
         if (!card || !name || !expiry || !cvv) {
-          showResult('error','⚠️ Tarjeta incompleta','Completa todos los campos.');
+          showResult('error','Tarjeta incompleta','Completa todos los campos.');
           btn.classList.remove('loading'); btn.disabled = false; return;
         }
         const pagoRes = await fetch(PAYMENT_URL, {
@@ -348,24 +408,27 @@
           body: JSON.stringify({ card, name, expiry, cvv, amount: totalFinal })
         });
         if (!pagoRes.ok) {
-          showResult('error','❌ Pago rechazado','El pago con tarjeta no fue aprobado.');
+          showResult('error','Pago rechazado','El pago con tarjeta no fue aprobado.');
           btn.classList.remove('loading'); btn.disabled = false; return;
         }
       }
 
-      // ── PASO 2: Generar factura ────────────────────────────────────────
+      // PASO 2: Generar factura
       const facturaRes = await fetch(FACTURA_URL, {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({
           cliente: {
-            dni:       cedulaCliente,          // ✅ campo real de Cliente.java
-            nombre:    nombreCliente,
-            email:     emailCliente,           // ✅ campo real de Cliente.java
-            direccion: clienteActual?.direccion || ''
+            cedula:    cedulaCliente,
+            nombre:    clienteActual.nombre    || '',
+            apellido:  clienteActual.apellido  || '',
+            correo:    correoCliente,
+            telefono:  clienteActual.telefono  || '',
+            direccion: clienteActual.direccion || '',
+            estado:    clienteActual.estado    || 'ACTIVO'
           },
           detalles: carrito.map(p => ({
-            productoId:     p.id,              // ✅ id externo sin FK local
-            productoNombre: p.nombre,          // ✅ snapshot del nombre
+            productoId:     p.id,
+            productoNombre: p.nombre,
             cantidad:       p.cantidad,
             precioUnitario: p.precio,
             subtotal:       p.precio * p.cantidad
@@ -376,27 +439,32 @@
       });
 
       if (facturaRes.ok) {
-     // ── PASO 3: Reducir stock en Grupo 4 ────────────────────────────
-        // Su endpoint usa ?idProducto=X&cantidad=Y (no JSON body)
-        for (const p of carrito) {
-          try {
-            await fetch(`/api/proxy/productos/reducir-stock?idProducto=${p.id}&cantidad=${p.cantidad}`, {
-              method: 'PUT'
-            });
-          } catch(e) {
-            console.warn(`Stock no reducido para producto ${p.id}:`, e);
-          }
+        // PASO 3: Reducir stock en Grupo 4
+        // Grupo 4 usa @RequestBody List con {idProducto, cantidad}
+        try {
+          await fetch('/api/proxy/productos/reducir-stock', {
+            method: 'PUT',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify(
+              carrito.map(p => ({
+                idProducto: p.id,
+                cantidad:   p.cantidad
+              }))
+            )
+          });
+        } catch(e) {
+          console.warn('Stock no reducido:', e);
         }
 
-        showResult('success','✅ Factura generada',
-          `Pago ${metodo} procesado exitosamente\n📧 Factura enviada a ${emailCliente}`);
+        showResult('success','Factura generada',
+          'Pago ' + metodo + ' procesado exitosamente\nFactura enviada a ' + correoCliente);
         setTimeout(() => { window.location.href = '/'; }, 4000);
       } else {
         const errText = await facturaRes.text();
-        showResult('error','❌ Error al generar factura', errText);
+        showResult('error','Error al generar factura', errText);
       }
     } catch(e) {
-      showResult('error','🔌 Error de conexión', e.message);
+      showResult('error','Error de conexion', e.message);
     } finally {
       btn.classList.remove('loading'); btn.disabled = false;
     }
@@ -405,8 +473,8 @@
   function showResult(type, title, detail) {
     const r = document.getElementById('result');
     r.className = 'result ' + type;
-    r.innerHTML = `<div style="font-weight:700;margin-bottom:0.3rem;">${title}</div>
-                   <div style="opacity:0.8;font-size:0.75rem;white-space:pre-line;">${detail}</div>`;
+    r.innerHTML = '<div style="font-weight:700;margin-bottom:0.3rem;">' + title + '</div>' +
+                  '<div style="opacity:0.8;font-size:0.75rem;white-space:pre-line;">' + detail + '</div>';
   }
 </script>
 </body>
