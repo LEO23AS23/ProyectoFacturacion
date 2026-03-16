@@ -4,63 +4,61 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Facturación — ProyectoFacturacion</title>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;500;700&display=swap" rel="stylesheet"/>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg: #0a0a0f; --card: #13131a; --border: #2a2a3a;
-      --accent: #00e5ff; --accent2: #7b2fff; --text: #e8e8f0;
-      --muted: #6b6b80; --success: #00e676; --error: #ff1744;
+      --bg: #1a1a1a; --card: #242424; --border: #333333;
+      --accent: #e0e0e0; --accent2: #555555; --text: #f0f0f0;
+      --muted: #888888; --success: #6fcf97; --error: #eb5757;
     }
-    body { min-height:100vh; background:var(--bg); font-family:'Syne',sans-serif; color:var(--text); padding:2rem;
-      background-image: radial-gradient(ellipse 80% 50% at 20% 20%, rgba(123,47,255,0.15) 0%, transparent 60%),
-                        radial-gradient(ellipse 60% 40% at 80% 80%, rgba(0,229,255,0.1) 0%, transparent 60%); }
-    h1 { font-size:1.8rem; font-weight:800; margin-bottom:0.3rem; }
-    h1 span { color:var(--accent); }
+    body { min-height:100vh; background:var(--bg); font-family:'Inter',sans-serif; color:var(--text); padding:2rem; }
+    h1 { font-size:1.8rem; font-weight:700; margin-bottom:0.3rem; letter-spacing:-0.02em; }
+    h1 span { color:var(--accent); border-bottom:2px solid #444; }
     .subtitle { color:var(--muted); font-family:'Space Mono',monospace; font-size:0.8rem; margin-bottom:2rem; }
     .layout { display:grid; grid-template-columns:1fr 420px; gap:2rem; max-width:1100px; margin:0 auto; }
-    .section-title { font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); margin-bottom:1rem; }
+    .section-title { font-size:0.7rem; font-weight:600; text-transform:uppercase; letter-spacing:0.12em; color:var(--muted); margin-bottom:1rem; }
     .carrito-items { display:flex; flex-direction:column; gap:0.75rem; margin-bottom:1.5rem; }
-    .carrito-item { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:1rem; display:flex; gap:1rem; align-items:center; }
-    .carrito-item img { width:56px; height:56px; object-fit:contain; background:#fff; border-radius:8px; padding:4px; }
+    .carrito-item { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:1rem; display:flex; gap:1rem; align-items:center; }
+    .carrito-item img { width:56px; height:56px; object-fit:contain; background:#fff; border-radius:6px; padding:4px; }
     .item-info { flex:1; }
-    .item-nombre { font-size:0.85rem; font-weight:700; margin-bottom:0.2rem; }
+    .item-nombre { font-size:0.85rem; font-weight:600; margin-bottom:0.2rem; }
     .item-meta { font-size:0.75rem; color:var(--muted); font-family:'Space Mono',monospace; }
     .item-precio { font-weight:700; color:var(--success); font-family:'Space Mono',monospace; }
-    .resumen-box { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:1.5rem; margin-bottom:1.5rem; }
+    .resumen-box { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:1.5rem; margin-bottom:1.5rem; }
     .resumen-row { display:flex; justify-content:space-between; margin-bottom:0.6rem; font-size:0.9rem; }
-    .resumen-row.total { font-size:1.1rem; font-weight:800; border-top:1px solid var(--border); padding-top:0.75rem; margin-top:0.75rem; }
+    .resumen-row.total { font-size:1.1rem; font-weight:700; border-top:1px solid var(--border); padding-top:0.75rem; margin-top:0.75rem; }
     .resumen-row.total span:last-child { color:var(--success); }
-    .pay-box { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:1.5rem; }
+    .pay-box { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:1.5rem; }
     .field { margin-bottom:1rem; }
-    label { display:block; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); margin-bottom:0.4rem; }
-    input { width:100%; background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:0.8rem 1rem; font-family:'Space Mono',monospace; font-size:0.9rem; color:var(--text); outline:none; transition:border-color 0.2s; }
-    input:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(0,229,255,0.1); }
+    label { display:block; font-size:0.7rem; font-weight:600; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); margin-bottom:0.4rem; }
+    input { width:100%; background:#1e1e1e; border:1px solid var(--border); border-radius:6px; padding:0.75rem 1rem; font-family:'Space Mono',monospace; font-size:0.9rem; color:var(--text); outline:none; transition:border-color 0.2s; }
+    input:focus { border-color:#666; }
     .row2 { display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; }
-    .cliente-box { background:rgba(0,229,255,0.05); border:1px solid rgba(0,229,255,0.2); border-radius:12px; padding:1rem; margin-bottom:1rem; display:none; }
+    .cliente-box { background:#1e1e1e; border:1px solid #444; border-radius:8px; padding:1rem; margin-bottom:1rem; display:none; }
     .cliente-nombre { font-weight:700; color:var(--accent); margin-bottom:0.2rem; }
     .cliente-email { font-size:0.8rem; color:var(--muted); font-family:'Space Mono',monospace; }
-    .card-preview { background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460); border:1px solid var(--border); border-radius:16px; padding:1.5rem; margin-bottom:1.25rem; position:relative; overflow:hidden; }
-    .card-preview::before { content:''; position:absolute; top:-30px; right:-30px; width:120px; height:120px; border-radius:50%; background:radial-gradient(circle,rgba(0,229,255,0.15),transparent 70%); }
-    .card-chip { width:36px; height:26px; background:linear-gradient(135deg,#d4a843,#f0c86a); border-radius:5px; margin-bottom:1.2rem; }
-    .card-num { font-family:'Space Mono',monospace; font-size:1rem; letter-spacing:0.15em; margin-bottom:1rem; }
+    .card-preview { background:linear-gradient(135deg,#2a2a2a,#333,#3a3a3a); border:1px solid #444; border-radius:12px; padding:1.5rem; margin-bottom:1.25rem; position:relative; overflow:hidden; }
+    .card-preview::before { content:''; position:absolute; top:-30px; right:-30px; width:120px; height:120px; border-radius:50%; background:radial-gradient(circle,rgba(255,255,255,0.05),transparent 70%); }
+    .card-chip { width:36px; height:26px; background:linear-gradient(135deg,#d4a843,#f0c86a); border-radius:4px; margin-bottom:1.2rem; }
+    .card-num { font-family:'Space Mono',monospace; font-size:1rem; letter-spacing:0.15em; margin-bottom:1rem; color:#ccc; }
     .card-bottom { display:flex; justify-content:space-between; }
-    .card-lbl { font-size:0.6rem; color:var(--muted); text-transform:uppercase; }
-    .card-val { font-family:'Space Mono',monospace; font-size:0.8rem; }
+    .card-lbl { font-size:0.6rem; color:#666; text-transform:uppercase; }
+    .card-val { font-family:'Space Mono',monospace; font-size:0.8rem; color:#ccc; }
     .metodo-pago { display:flex; gap:0.75rem; margin-bottom:1.25rem; }
-    .metodo-btn { flex:1; padding:0.7rem; background:var(--bg); border:1px solid var(--border); border-radius:10px; color:var(--muted); font-family:'Syne',sans-serif; font-size:0.85rem; cursor:pointer; transition:all 0.2s; }
-    .metodo-btn.active { border-color:var(--accent); color:var(--accent); background:rgba(0,229,255,0.05); }
-    .btn { width:100%; padding:1rem; background:linear-gradient(135deg,var(--accent2),var(--accent)); border:none; border-radius:12px; font-family:'Syne',sans-serif; font-size:1rem; font-weight:700; color:#fff; cursor:pointer; transition:opacity 0.2s; }
-    .btn:hover { opacity:0.9; }
-    .btn:disabled { opacity:0.5; cursor:not-allowed; }
-    .btn-registro { width:100%; padding:0.8rem; background:var(--accent2); border:none; border-radius:10px; font-family:'Syne',sans-serif; font-size:0.9rem; font-weight:700; color:#fff; cursor:pointer; margin-top:0.5rem; transition:opacity 0.2s; }
-    .btn-registro:hover { opacity:0.85; }
-    .spinner { display:none; width:18px; height:18px; border:2px solid rgba(255,255,255,0.3); border-top-color:#fff; border-radius:50%; animation:spin 0.7s linear infinite; margin:0 auto; }
+    .metodo-btn { flex:1; padding:0.7rem; background:#1e1e1e; border:1px solid var(--border); border-radius:8px; color:var(--muted); font-family:'Inter',sans-serif; font-size:0.85rem; cursor:pointer; transition:all 0.2s; }
+    .metodo-btn.active { border-color:#888; color:var(--text); background:#2a2a2a; }
+    .btn { width:100%; padding:1rem; background:#444; border:none; border-radius:8px; font-family:'Inter',sans-serif; font-size:1rem; font-weight:700; color:#fff; cursor:pointer; transition:background 0.2s; }
+    .btn:hover { background:#555; }
+    .btn:disabled { opacity:0.4; cursor:not-allowed; }
+    .btn-registro { width:100%; padding:0.8rem; background:#3a3a3a; border:1px solid #555; border-radius:8px; font-family:'Inter',sans-serif; font-size:0.9rem; font-weight:600; color:#fff; cursor:pointer; margin-top:0.5rem; transition:background 0.2s; }
+    .btn-registro:hover { background:#444; }
+    .spinner { display:none; width:18px; height:18px; border:2px solid rgba(255,255,255,0.2); border-top-color:#fff; border-radius:50%; animation:spin 0.7s linear infinite; margin:0 auto; }
     .btn.loading .btn-text { display:none; }
     .btn.loading .spinner { display:block; }
-    .result { margin-top:1rem; padding:1rem; border-radius:10px; font-family:'Space Mono',monospace; font-size:0.8rem; display:none; }
-    .result.success { background:rgba(0,230,118,0.1); border:1px solid rgba(0,230,118,0.3); color:var(--success); display:block; }
-    .result.error { background:rgba(255,23,68,0.1); border:1px solid rgba(255,23,68,0.3); color:var(--error); display:block; }
+    .result { margin-top:1rem; padding:1rem; border-radius:8px; font-family:'Space Mono',monospace; font-size:0.8rem; display:none; }
+    .result.success { background:rgba(111,207,151,0.1); border:1px solid rgba(111,207,151,0.3); color:var(--success); display:block; }
+    .result.error { background:rgba(235,87,87,0.1); border:1px solid rgba(235,87,87,0.3); color:var(--error); display:block; }
     .campo-tarjeta { display:none; }
     @keyframes spin { to { transform:rotate(360deg); } }
     @media(max-width:768px) { .layout { grid-template-columns:1fr; } }
@@ -102,52 +100,30 @@
         <label>Cédula</label>
         <div style="display:flex;gap:0.5rem;">
           <input type="text" id="cedula" placeholder="1234567890" maxlength="10"/>
-          <button onclick="buscarCliente()" style="padding:0 1rem;background:var(--accent2);border:none;border-radius:10px;color:#fff;cursor:pointer;font-family:'Syne',sans-serif;white-space:nowrap;">Buscar</button>
+          <button onclick="buscarCliente()" style="padding:0 1rem;background:#444;border:1px solid #555;border-radius:8px;color:#fff;cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap;font-weight:600;">Buscar</button>
         </div>
       </div>
 
-      <!-- Cliente encontrado -->
       <div class="cliente-box" id="clienteBox">
         <div class="cliente-nombre" id="clienteNombre"></div>
         <div class="cliente-email" id="clienteEmail"></div>
       </div>
 
-      <!-- Cliente no encontrado → formulario de registro directo en Grupo 1 -->
       <div id="clienteNuevo" style="display:none;">
         <div style="font-size:0.75rem;color:var(--error);margin-bottom:1rem;font-family:'Space Mono',monospace;">
           ⚠️ Cliente no encontrado — registra sus datos:
         </div>
         <div class="row2">
-          <div class="field">
-            <label>Nombre</label>
-            <input type="text" id="nuevoNombre" placeholder="Juan"/>
-          </div>
-          <div class="field">
-            <label>Apellido</label>
-            <input type="text" id="nuevoApellido" placeholder="Pérez"/>
-          </div>
+          <div class="field"><label>Nombre</label><input type="text" id="nuevoNombre" placeholder="Juan"/></div>
+          <div class="field"><label>Apellido</label><input type="text" id="nuevoApellido" placeholder="Pérez"/></div>
         </div>
-        <div class="field">
-          <label>Correo</label>
-          <input type="email" id="nuevoCorreo" placeholder="juan@email.com"/>
-        </div>
+        <div class="field"><label>Correo</label><input type="email" id="nuevoCorreo" placeholder="juan@email.com"/></div>
         <div class="row2">
-          <div class="field">
-            <label>Teléfono</label>
-            <input type="text" id="nuevoTelefono" placeholder="0999999999" maxlength="10"/>
-          </div>
-          <div class="field">
-            <label>Edad</label>
-            <input type="number" id="nuevoEdad" placeholder="25" min="1" max="120"/>
-          </div>
+          <div class="field"><label>Teléfono</label><input type="text" id="nuevoTelefono" placeholder="0999999999" maxlength="10"/></div>
+          <div class="field"><label>Edad</label><input type="number" id="nuevoEdad" placeholder="25" min="1" max="120"/></div>
         </div>
-        <div class="field">
-          <label>Dirección</label>
-          <input type="text" id="nuevaDireccion" placeholder="Quevedo - Los Ríos"/>
-        </div>
-        <button class="btn-registro" onclick="registrarCliente()">
-          ➕ Registrar cliente
-        </button>
+        <div class="field"><label>Dirección</label><input type="text" id="nuevaDireccion" placeholder="Quevedo - Los Ríos"/></div>
+        <button class="btn-registro" onclick="registrarCliente()">+ Registrar cliente</button>
       </div>
 
       <div style="border-top:1px solid var(--border);margin:1.25rem 0;"></div>
@@ -168,14 +144,8 @@
             <div><div class="card-lbl">Total</div><div class="card-val" id="cardTotal" style="color:var(--success)">$0.00</div></div>
           </div>
         </div>
-        <div class="field">
-          <label>Número de tarjeta</label>
-          <input type="text" id="cardNumber" maxlength="19" placeholder="1234 5678 9012 3456"/>
-        </div>
-        <div class="field">
-          <label>Titular</label>
-          <input type="text" id="cardHolder" placeholder="Juan Pérez"/>
-        </div>
+        <div class="field"><label>Número de tarjeta</label><input type="text" id="cardNumber" maxlength="19" placeholder="1234 5678 9012 3456"/></div>
+        <div class="field"><label>Titular</label><input type="text" id="cardHolder" placeholder="Juan Pérez"/></div>
         <div class="row2">
           <div class="field"><label>Vencimiento</label><input type="text" id="expiry" maxlength="5" placeholder="MM/AA"/></div>
           <div class="field"><label>CVV</label><input type="text" id="cvv" maxlength="3" placeholder="123"/></div>
@@ -220,13 +190,8 @@
       try {
         carrito = JSON.parse(decodeURIComponent(carritoParam)).map(normalizarProducto);
         renderCarrito();
-      } catch(e) {
-        console.error('Error parseando carrito:', e);
-        mostrarCarritoVacio();
-      }
-    } else {
-      mostrarCarritoVacio();
-    }
+      } catch(e) { mostrarCarritoVacio(); }
+    } else { mostrarCarritoVacio(); }
 
     document.getElementById('cardNumber').addEventListener('input', function(e) {
       let v = e.target.value.replace(/\D/g,'').substring(0,16);
@@ -253,8 +218,7 @@
     if (!carrito.length) { mostrarCarritoVacio(); return; }
     document.getElementById('carritoItems').innerHTML = carrito.map(p => `
       <div class="carrito-item">
-        <img src="${p.imagen ? PRODUCTOS_URL + p.imagen : 'https://via.placeholder.com/56'}"
-             onerror="this.src='https://via.placeholder.com/56'"/>
+        <img src="${p.imagen ? PRODUCTOS_URL + p.imagen : 'https://via.placeholder.com/56'}" onerror="this.src='https://via.placeholder.com/56'"/>
         <div class="item-info">
           <div class="item-nombre">${p.nombre}</div>
           <div class="item-meta">Cant: ${p.cantidad} x $${p.precio.toFixed(2)}</div>
@@ -262,7 +226,6 @@
         <div class="item-precio">$${(p.precio * p.cantidad).toFixed(2)}</div>
       </div>
     `).join('');
-
     const sub = carrito.reduce((s, p) => s + p.precio * p.cantidad, 0);
     try {
       const res  = await fetch(TAX_URL + '?subtotal=' + sub);
@@ -273,8 +236,7 @@
       document.getElementById('cardTotal').textContent = '$' + data.total.toFixed(2);
       totalFinal = data.total;
     } catch(e) {
-      const iva = sub * 0.15;
-      totalFinal = sub + iva;
+      const iva = sub * 0.15; totalFinal = sub + iva;
       document.getElementById('subtotal').textContent  = '$' + sub.toFixed(2);
       document.getElementById('iva').textContent       = '$' + iva.toFixed(2);
       document.getElementById('total').textContent     = '$' + totalFinal.toFixed(2);
@@ -285,25 +247,16 @@
   async function buscarCliente() {
     const cedula = document.getElementById('cedula').value.trim();
     if (!cedula || cedula.length < 10) { alert('Ingresa una cedula valida de 10 digitos'); return; }
-
     const btnBuscar = document.querySelector('button[onclick="buscarCliente()"]');
-    btnBuscar.textContent = '...';
-    btnBuscar.disabled = true;
-
+    btnBuscar.textContent = '...'; btnBuscar.disabled = true;
     try {
       const res = await fetch('/api/proxy/clientes');
-      if (!res.ok) throw new Error('Error al conectar con microservicio de clientes');
+      if (!res.ok) throw new Error('Error al conectar');
       const lista = await res.json();
-      const cliente = lista.find(c =>
-        c.cedula         === cedula ||
-        c.identificacion === cedula ||
-        c.dni            === cedula
-      );
-
+      const cliente = lista.find(c => c.cedula === cedula || c.identificacion === cedula || c.dni === cedula);
       if (cliente) {
         clienteActual = cliente;
-        const nombre = [cliente.nombre, cliente.apellido].filter(Boolean).join(' ');
-        document.getElementById('clienteNombre').textContent = nombre || 'Cliente encontrado';
+        document.getElementById('clienteNombre').textContent = [cliente.nombre, cliente.apellido].filter(Boolean).join(' ');
         document.getElementById('clienteEmail').textContent  = cliente.correo || cliente.email || '';
         document.getElementById('clienteBox').style.display   = 'block';
         document.getElementById('clienteNuevo').style.display = 'none';
@@ -317,8 +270,7 @@
       document.getElementById('clienteBox').style.display   = 'none';
       document.getElementById('clienteNuevo').style.display = 'block';
     } finally {
-      btnBuscar.textContent = 'Buscar';
-      btnBuscar.disabled = false;
+      btnBuscar.textContent = 'Buscar'; btnBuscar.disabled = false;
     }
   }
 
@@ -330,46 +282,18 @@
     const telefono  = document.getElementById('nuevoTelefono').value.trim();
     const edad      = document.getElementById('nuevoEdad').value.trim();
     const direccion = document.getElementById('nuevaDireccion').value.trim();
-
-    if (!nombre || !apellido || !correo || !telefono || !direccion) {
-      alert('Completa todos los campos para registrar el cliente');
-      return;
-    }
-
+    if (!nombre || !apellido || !correo || !telefono || !direccion) { alert('Completa todos los campos'); return; }
     const btnReg = document.querySelector('button[onclick="registrarCliente()"]');
-    btnReg.textContent = 'Registrando...';
-    btnReg.disabled = true;
-
+    btnReg.textContent = 'Registrando...'; btnReg.disabled = true;
     try {
       const res = await fetch('/api/proxy/clientes', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({
-          cedula,
-          nombre,
-          apellido,
-          edad:      parseInt(edad) || 0,
-          correo,
-          telefono,
-          direccion,
-          estado: 'ACTIVO'
-        })
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ cedula, nombre, apellido, edad: parseInt(edad)||0, correo, telefono, direccion, estado:'ACTIVO' })
       });
-
-      if (res.ok) {
-        alert('Cliente registrado exitosamente');
-        document.getElementById('clienteNuevo').style.display = 'none';
-        await buscarCliente();
-      } else {
-        const err = await res.text();
-        alert('Error al registrar cliente: ' + err);
-      }
-    } catch(e) {
-      alert('Error de conexion: ' + e.message);
-    } finally {
-      btnReg.textContent = '+ Registrar cliente';
-      btnReg.disabled = false;
-    }
+      if (res.ok) { alert('Cliente registrado exitosamente'); document.getElementById('clienteNuevo').style.display = 'none'; await buscarCliente(); }
+      else { alert('Error al registrar: ' + await res.text()); }
+    } catch(e) { alert('Error de conexion: ' + e.message); }
+    finally { btnReg.textContent = '+ Registrar cliente'; btnReg.disabled = false; }
   }
 
   function setMetodo(m) {
@@ -382,99 +306,48 @@
   async function procesarPago() {
     const btn = document.getElementById('btnPagar');
     if (!carrito.length) { showResult('error','Carrito vacio','No hay productos para facturar.'); return; }
-
     const cedulaCliente = document.getElementById('cedula').value.trim();
     if (!cedulaCliente) { showResult('error','Falta cedula','Busca un cliente primero.'); return; }
     if (!clienteActual) { showResult('error','Cliente no registrado','Registra el cliente primero.'); return; }
-
     const nombreCliente = [clienteActual.nombre, clienteActual.apellido].filter(Boolean).join(' ');
     const correoCliente = clienteActual.correo || clienteActual.email || '';
-
     btn.classList.add('loading'); btn.disabled = true;
-
     try {
-      // PASO 1: Pago con tarjeta
       if (metodo === 'tarjeta') {
-        const card   = document.getElementById('cardNumber').value.replace(/\s/g,'');
-        const name   = document.getElementById('cardHolder').value;
+        const card = document.getElementById('cardNumber').value.replace(/\s/g,'');
+        const name = document.getElementById('cardHolder').value;
         const expiry = document.getElementById('expiry').value;
-        const cvv    = document.getElementById('cvv').value;
-        if (!card || !name || !expiry || !cvv) {
-          showResult('error','Tarjeta incompleta','Completa todos los campos.');
-          btn.classList.remove('loading'); btn.disabled = false; return;
-        }
-        const pagoRes = await fetch(PAYMENT_URL, {
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ card, name, expiry, cvv, amount: totalFinal })
-        });
-        if (!pagoRes.ok) {
-          showResult('error','Pago rechazado','El pago con tarjeta no fue aprobado.');
-          btn.classList.remove('loading'); btn.disabled = false; return;
-        }
+        const cvv = document.getElementById('cvv').value;
+        if (!card || !name || !expiry || !cvv) { showResult('error','Tarjeta incompleta','Completa todos los campos.'); btn.classList.remove('loading'); btn.disabled = false; return; }
+        const pagoRes = await fetch(PAYMENT_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ card, name, expiry, cvv, amount: totalFinal }) });
+        if (!pagoRes.ok) { showResult('error','Pago rechazado','El pago con tarjeta no fue aprobado.'); btn.classList.remove('loading'); btn.disabled = false; return; }
       }
-
-      // PASO 2: Generar factura
       const facturaRes = await fetch(FACTURA_URL, {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({
-          cliente: {
-            cedula:    cedulaCliente,
-            nombre:    clienteActual.nombre    || '',
-            apellido:  clienteActual.apellido  || '',
-            correo:    correoCliente,
-            telefono:  clienteActual.telefono  || '',
-            direccion: clienteActual.direccion || '',
-            estado:    clienteActual.estado    || 'ACTIVO'
-          },
-          detalles: carrito.map(p => ({
-            productoId:     p.id,
-            productoNombre: p.nombre,
-            cantidad:       p.cantidad,
-            precioUnitario: p.precio,
-            subtotal:       p.precio * p.cantidad
-          })),
+          cliente: { cedula: cedulaCliente, nombre: clienteActual.nombre||'', apellido: clienteActual.apellido||'', correo: correoCliente, telefono: clienteActual.telefono||'', direccion: clienteActual.direccion||'', estado: clienteActual.estado||'ACTIVO' },
+          detalles: carrito.map(p => ({ productoId: p.id, productoNombre: p.nombre, cantidad: p.cantidad, precioUnitario: p.precio, subtotal: p.precio * p.cantidad })),
           metodoPago: metodo.toUpperCase(),
-          subtotal:   carrito.reduce((s,p) => s + p.precio * p.cantidad, 0)
+          subtotal: carrito.reduce((s,p) => s + p.precio * p.cantidad, 0)
         })
       });
-
       if (facturaRes.ok) {
-        // PASO 3: Reducir stock en Grupo 4
-        // Grupo 4 usa @RequestBody List con {idProducto, cantidad}
         try {
-          await fetch('/api/proxy/productos/reducir-stock', {
-            method: 'PUT',
-            headers: {'Content-Type':'application/json'},
-            body: JSON.stringify(
-              carrito.map(p => ({
-                idProducto: p.id,
-                cantidad:   p.cantidad
-              }))
-            )
-          });
-        } catch(e) {
-          console.warn('Stock no reducido:', e);
-        }
-
-        showResult('success','Factura generada',
-          'Pago ' + metodo + ' procesado exitosamente\nFactura enviada a ' + correoCliente);
+          await fetch('/api/proxy/productos/reducir-stock', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(carrito.map(p => ({ idProducto: p.id, cantidad: p.cantidad }))) });
+        } catch(e) { console.warn('Stock no reducido:', e); }
+        showResult('success','Factura generada','Pago ' + metodo + ' procesado exitosamente\nFactura enviada a ' + correoCliente);
         setTimeout(() => { window.location.href = '/'; }, 4000);
       } else {
-        const errText = await facturaRes.text();
-        showResult('error','Error al generar factura', errText);
+        showResult('error','Error al generar factura', await facturaRes.text());
       }
-    } catch(e) {
-      showResult('error','Error de conexion', e.message);
-    } finally {
-      btn.classList.remove('loading'); btn.disabled = false;
-    }
+    } catch(e) { showResult('error','Error de conexion', e.message); }
+    finally { btn.classList.remove('loading'); btn.disabled = false; }
   }
 
   function showResult(type, title, detail) {
     const r = document.getElementById('result');
     r.className = 'result ' + type;
-    r.innerHTML = '<div style="font-weight:700;margin-bottom:0.3rem;">' + title + '</div>' +
-                  '<div style="opacity:0.8;font-size:0.75rem;white-space:pre-line;">' + detail + '</div>';
+    r.innerHTML = '<div style="font-weight:700;margin-bottom:0.3rem;">' + title + '</div><div style="opacity:0.8;font-size:0.75rem;white-space:pre-line;">' + detail + '</div>';
   }
 </script>
 </body>
